@@ -120,3 +120,39 @@ export interface Resources {
 }
 
 export type Choice = "defect" | "cooperate";
+
+// Represents the global state of the game
+export interface GlobalState {
+    year: number; // round
+    totalPopulation: number; 
+    totalResources: Resources;
+    nations: Nation[]; 
+    isGlobalCollapse: boolean;
+}
+
+// Annual depletion rates
+export interface ResourceDepletionRate {
+    food: number;
+    energy: number; 
+    water: number; 
+}
+
+
+export interface Nation {
+    id: number;
+    name: string;
+    resources: Resources;
+    population: number;
+    isCollapsed: boolean;
+    category: "low" | "medium" | "high";
+    state: "normal" | "struggling";
+}
+
+export interface YearlyOutcome {
+    year: number;
+    globalCooperation: number;
+    globalDefection: number;
+    globalResources: Resources;
+    globalPopulation: number;
+    activeNations: number;
+}
