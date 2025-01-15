@@ -303,7 +303,6 @@ export class SurvivalSimulation {
                     state: nation.state,
                     choice: nationChoice as Choice
                 })),
-                activeNations: this.globalState.nations.filter(n => !n.isCollapsed).length,
             }
             resultsLogger.info("yearly_outcome", outcome);
             this.onYearOutcome?.(outcome);

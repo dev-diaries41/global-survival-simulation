@@ -161,7 +161,6 @@ export interface YearlyOutcome {
     globalDefection: number;
     globalResources: Resources;
     globalPopulation: number;
-    activeNations: number;
     nations: NationSummary[];
 }
 
