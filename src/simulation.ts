@@ -85,10 +85,10 @@ export class SurvivalSimulation {
             const waterContribution = Math.floor(this.globalState.totalResources.water * this.contributionFactor * nationPopulationFactor);
     
             const nationChanges = {
-                food: Math.max(nation.resources.food - foodContribution, 0) - nation.resources.food,
-                energy: Math.max(nation.resources.energy - energyContribution, 0) - nation.resources.energy,
-                water: Math.max(nation.resources.water - waterContribution, 0) - nation.resources.water,
-                population:nationPopulationChange,
+                food: -foodContribution,
+                energy: -energyContribution,
+                water: -waterContribution,
+                population: nationPopulationChange,
                 state: newState
             };
     
@@ -129,7 +129,7 @@ export class SurvivalSimulation {
         }
     }
 
-    private applyChanges(nation: Nation, nationChanges:NationChanges, globalChanges: Changes){
+    private applyChanges(nation: Nation, nationChanges: NationChanges, globalChanges: Changes) {
         if (nation.state !== nationChanges.state) {
             resultsLogger.info("state_transition", {
                 nation: nation.name,
@@ -138,18 +138,19 @@ export class SurvivalSimulation {
                 year: this.globalState.year,
             });
         }
-
-        nation.resources.food += nationChanges.food;
-        nation.resources.energy += nationChanges.energy;
-        nation.resources.water += nationChanges.water;
-        nation.state = nationChanges.state as Nation['state'];
+    
+        nation.resources.food = Math.max(nation.resources.food + nationChanges.food, 0);
+        nation.resources.energy = Math.max(nation.resources.energy + nationChanges.energy, 0);
+        nation.resources.water = Math.max(nation.resources.water + nationChanges.water, 0);
         nation.population += nationChanges.population;
-
-        this.globalState.totalResources.energy += globalChanges.energy;
-        this.globalState.totalResources.food += globalChanges.food;
-        this.globalState.totalResources.water += globalChanges.water;
+        nation.state = nationChanges.state as Nation['state'];
+    
+        this.globalState.totalResources.energy = Math.max(this.globalState.totalResources.energy + globalChanges.energy, 0);
+        this.globalState.totalResources.food = Math.max(this.globalState.totalResources.food + globalChanges.food, 0);
+        this.globalState.totalResources.water = Math.max(this.globalState.totalResources.water + globalChanges.water, 0);
         this.globalState.totalPopulation += nationChanges.population;
     }
+    
     
     
     private async decide(nation: Nation): Promise<{ choice: Choice; reasoning: string }> {
