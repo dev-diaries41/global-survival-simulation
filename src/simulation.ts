@@ -2,7 +2,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { generateJSON } from "./utils/openai";
 import { z } from "zod";
 import { logger, resultsLogger } from "./logger";
-import { Changes, Choice, GlobalState, Nation, NationChanges, ResourceDepletionRate, Resources, YearlyOutcome } from "./types";
+import { Changes, Choice, GlobalState, Nation, NationChanges, ResourceDepletionRate, Resources, SimulationOptions, YearlyOutcome } from "./types";
 
 
 export class SurvivalSimulation {
@@ -11,22 +11,25 @@ export class SurvivalSimulation {
     private contributionFactor: number;
     private defectGainFactor: number;
     private maxYears: number;
+    private onYearOutcome?: (outcome: YearlyOutcome) => void ;
 
-    constructor(
-        globalState: GlobalState, 
-        resourceDepletionRate: ResourceDepletionRate, 
-        maxYears: number = 10,
-        contributionFactor: number=0.05, 
-        defectGainFactor: number = 0.1,
-    ){
+    constructor(globalState: GlobalState, resourceDepletionRate: ResourceDepletionRate, options: SimulationOptions = {}){
+        const {
+            maxYears = 10,
+            contributionFactor = 0.05, 
+            defectGainFactor = 0.1,
+            onYearOutcome
+        } = options;
+
         this.globalState = globalState;
         this.resourceDepletionRate = resourceDepletionRate;
         this.maxYears = maxYears;
         this.defectGainFactor= defectGainFactor;
         this.contributionFactor = contributionFactor;
+        this.onYearOutcome = onYearOutcome;
         
         if(globalState.nations.length === 0){
-            this.globalState.nations = this.generateNations()
+            this.globalState.nations = this.generateNations();
         }
     }
 
@@ -105,7 +108,6 @@ export class SurvivalSimulation {
             const energyGain = Math.floor(this.globalState.totalResources.energy * this.defectGainFactor * nationPopulationFactor);
             const waterGain = Math.floor(this.globalState.totalResources.water * this.defectGainFactor * nationPopulationFactor);
     
-            // Calculate changes without applying them
             const nationChanges = {
                 food: foodGain,
                 energy: energyGain,
@@ -293,8 +295,8 @@ export class SurvivalSimulation {
                 globalPopulation: this.globalState.totalPopulation,
                 activeNations: this.globalState.nations.filter(n => !n.isCollapsed).length,
             }
-
             resultsLogger.info("yearly_outcome", outcome);
+            this.onYearOutcome?.(outcome);
         }
     
         if (!this.globalState.isGlobalCollapse && this.globalState.year >= this.maxYears) {

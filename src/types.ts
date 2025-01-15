@@ -168,3 +168,10 @@ export interface NationChanges extends Changes {
     population: number;
     state: string;
 }
+
+export interface SimulationOptions {
+    maxYears?: number;
+    contributionFactor?: number;
+    defectGainFactor?: number;
+    onYearOutcome?: (outcome: YearlyOutcome) => void;
+}
