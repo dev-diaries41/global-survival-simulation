@@ -137,6 +137,9 @@ export interface ResourceDepletionRate {
     water: number; 
 }
 
+export type NationCategory = "low" | "medium" | "high";
+
+export type NationState = "normal" | "struggling";
 
 export interface Nation {
     id: number;
@@ -144,8 +147,12 @@ export interface Nation {
     resources: Resources;
     population: number;
     isCollapsed: boolean;
-    category: "low" | "medium" | "high";
-    state: "normal" | "struggling";
+    category: NationCategory;
+    state: NationState;
+}
+
+interface NationSummary extends Pick<Nation, "id" | "population" | "state"> {
+    choice: Choice;
 }
 
 export interface YearlyOutcome {
@@ -155,16 +162,11 @@ export interface YearlyOutcome {
     globalResources: Resources;
     globalPopulation: number;
     activeNations: number;
+    nations: NationSummary[];
 }
 
 
-export interface Changes {
-    food: number;
-    energy: number;
-    water: number;
-};
-
-export interface NationChanges extends Changes {
+export interface NationChanges extends Resources {
     population: number;
     state: string;
 }

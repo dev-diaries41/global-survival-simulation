@@ -2,7 +2,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { generateJSON } from "./utils/openai";
 import { z } from "zod";
 import { logger, resultsLogger } from "./logger";
-import { Changes, Choice, GlobalState, Nation, NationChanges, ResourceDepletionRate, Resources, SimulationOptions, YearlyOutcome } from "./types";
+import { Choice, GlobalState, Nation, NationChanges, ResourceDepletionRate, Resources, SimulationOptions, YearlyOutcome } from "./types";
 
 
 export class SurvivalSimulation {
@@ -131,7 +131,7 @@ export class SurvivalSimulation {
         }
     }
 
-    private applyChanges(nation: Nation, nationChanges: NationChanges, globalChanges: Changes) {
+    private applyChanges(nation: Nation, nationChanges: NationChanges, globalChanges: Resources) {
         if (nation.state !== nationChanges.state) {
             resultsLogger.info("state_transition", {
                 nation: nation.name,
@@ -233,6 +233,7 @@ export class SurvivalSimulation {
             this.globalState.year = year;
             let globalCooperation = 0;
             let globalDefection = 0;
+            let nationChoice = "";  // needs to be initialised for use in yearly outcome
 
             const results = await Promise.all(
                 this.globalState.nations.map(async (nation) => {
@@ -266,6 +267,7 @@ export class SurvivalSimulation {
             for (const result of results) {
                 if (result) {
                     const { nation, choice, globalChanges, nationChanges } = result;
+                    nationChoice = choice; 
                     this.applyChanges(nation, nationChanges, globalChanges);
             
                     if (choice === "cooperate") {
@@ -293,6 +295,14 @@ export class SurvivalSimulation {
                 globalDefection,
                 globalResources: this.globalState.totalResources,
                 globalPopulation: this.globalState.totalPopulation,
+                nations: this.globalState.nations
+                .filter(n => !n.isCollapsed)
+                .map(nation => ({
+                    id: nation.id,
+                    population: nation.population,
+                    state: nation.state,
+                    choice: nationChoice as Choice
+                })),
                 activeNations: this.globalState.nations.filter(n => !n.isCollapsed).length,
             }
             resultsLogger.info("yearly_outcome", outcome);
