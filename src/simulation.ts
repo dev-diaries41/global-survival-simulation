@@ -2,7 +2,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { generateJSON } from "./utils/openai";
 import { z } from "zod";
 import { logger, resultsLogger } from "./logger";
-import { Choice, GlobalState, Nation, ResourceDepletionRate, Resources, YearlyOutcome } from "./types";
+import { Changes, Choice, GlobalState, Nation, NationChanges, ResourceDepletionRate, Resources, YearlyOutcome } from "./types";
 
 
 export class SurvivalSimulation {
@@ -32,7 +32,7 @@ export class SurvivalSimulation {
 
 
     private generateNations(): Nation[] {
-        const totalNations = 9; // Total number of nations
+        const totalNations = 9; 
         const categories = ["low", "medium", "high"] as const;
         const resourceRatios = { low: 1, medium: 2, high: 4 }; 
     
@@ -44,7 +44,6 @@ export class SurvivalSimulation {
     
         for (const category of categories) {
             for (let i = 0; i < totalNations / categories.length; i++) {
-                // Calculate resources based on the category
                 const resources: Resources = {
                     food: baseResources * resourceRatios[category],
                     energy: baseResources * resourceRatios[category],
@@ -55,7 +54,7 @@ export class SurvivalSimulation {
     
                 const nation: Nation = {
                     id: idCounter,
-                    name: `Nation ${idCounter}`, // Name generation
+                    name: `Nation ${idCounter}`,
                     resources,
                     population: basePopulation,
                     isCollapsed: false,
@@ -70,45 +69,88 @@ export class SurvivalSimulation {
         return nations;
     }
 
-    private applyProportionalResourceChange(
+    private calcStateChanges(
         nation: Nation,
         choice: Choice,
     ) {
         const nationPopulationFactor = nation.population / this.globalState.totalPopulation;
-    
+        const nationResourcesDepleted = nation.resources.food <= 0 || nation.resources.energy <= 0 || nation.resources.water <= 0;
+        const nationPopulationChange = nationResourcesDepleted? -Math.floor(nation.population * 0.1): Math.floor(nation.population * 0.01) ;
+        const newState =  nationResourcesDepleted? "struggling" : "normal";
+
         if (choice === "cooperate") {
             // Global resource contribution proportional to the nation's population
             const foodContribution = Math.floor(this.globalState.totalResources.food * this.contributionFactor * nationPopulationFactor);
             const energyContribution = Math.floor(this.globalState.totalResources.energy * this.contributionFactor * nationPopulationFactor);
             const waterContribution = Math.floor(this.globalState.totalResources.water * this.contributionFactor * nationPopulationFactor);
     
-            // Update global resources
-            this.globalState.totalResources.food += foodContribution;
-            this.globalState.totalResources.energy += energyContribution;
-            this.globalState.totalResources.water += waterContribution;
+            const nationChanges = {
+                food: Math.max(nation.resources.food - foodContribution, 0) - nation.resources.food,
+                energy: Math.max(nation.resources.energy - energyContribution, 0) - nation.resources.energy,
+                water: Math.max(nation.resources.water - waterContribution, 0) - nation.resources.water,
+                population:nationPopulationChange,
+                state: newState
+            };
     
-            // Deduct resources from the nation
-            nation.resources.food = Math.max(nation.resources.food - foodContribution, 0);
-            nation.resources.energy = Math.max(nation.resources.energy - foodContribution, 0);
-            nation.resources.water = Math.max(nation.resources.water - foodContribution, 0);
-            
+            const globalChanges = {
+                food: foodContribution,
+                energy: energyContribution,
+                water: waterContribution,
+            };
+        
+            return { nationChanges, globalChanges };
         } else if (choice === "defect") {
             // Resource gain proportional to the nation's population
             const foodGain = Math.floor(this.globalState.totalResources.food * this.defectGainFactor * nationPopulationFactor);
             const energyGain = Math.floor(this.globalState.totalResources.energy * this.defectGainFactor * nationPopulationFactor);
             const waterGain = Math.floor(this.globalState.totalResources.water * this.defectGainFactor * nationPopulationFactor);
     
-            // Increase nation resources
-            nation.resources.food += foodGain;
-            nation.resources.energy += energyGain;
-            nation.resources.water += waterGain;
+            // Calculate changes without applying them
+            const nationChanges = {
+                food: foodGain,
+                energy: energyGain,
+                water: waterGain,
+                population: nationPopulationChange,
+                state: newState
+            };
     
-            // Decrease global resources
-            this.globalState.totalResources.food -= foodGain;
-            this.globalState.totalResources.energy -= energyGain;
-            this.globalState.totalResources.water -= waterGain;
+            const globalChanges = {
+                food: -foodGain,
+                energy: -energyGain,
+                water: -waterGain,
+            };
+    
+            return { nationChanges, globalChanges };
+        } else {
+            return { 
+                nationChanges: { food: 0, energy: 0, water: 0, population: nationPopulationChange, state: newState }, 
+                globalChanges: { food: 0, energy: 0, water: 0 } 
+            };
         }
     }
+
+    private applyChanges(nation: Nation, nationChanges:NationChanges, globalChanges: Changes){
+        if (nation.state !== nationChanges.state) {
+            resultsLogger.info("state_transition", {
+                nation: nation.name,
+                from: nation.state,
+                to: nationChanges.state,
+                year: this.globalState.year,
+            });
+        }
+
+        nation.resources.food += nationChanges.food;
+        nation.resources.energy += nationChanges.energy;
+        nation.resources.water += nationChanges.water;
+        nation.state = nationChanges.state as Nation['state'];
+        nation.population += nationChanges.population;
+
+        this.globalState.totalResources.energy += globalChanges.energy;
+        this.globalState.totalResources.food += globalChanges.food;
+        this.globalState.totalResources.water += globalChanges.water;
+        this.globalState.totalPopulation += nationChanges.population;
+    }
+    
     
     private async decide(nation: Nation): Promise<{ choice: Choice; reasoning: string }> {
         const systemPrompt = `
@@ -168,6 +210,18 @@ export class SurvivalSimulation {
         return { choice: res.choice, reasoning: res.reasoning };
     }
 
+    private isGlobalCollapse():boolean {
+        const globalResourcesDepleted = this.globalState.totalResources.food <= 0 || this.globalState.totalResources.energy <= 0 || this.globalState.totalResources.water <= 0;
+        const extinct = this.globalState.totalPopulation <= 0;
+        const allNationsCollapsed = this.globalState.nations.filter((nation) => !nation.isCollapsed).length === 0;
+
+        if (globalResourcesDepleted || extinct || allNationsCollapsed) {
+            resultsLogger.info("Global collapse has occurred 💀");
+            return true;
+        }
+        return false;
+    }
+
     public async run(): Promise<GlobalState> {
     
         for (let year = 1; year <= this.maxYears; year++) {
@@ -179,57 +233,24 @@ export class SurvivalSimulation {
     
             for (const nation of this.globalState.nations) {
                 try {
-                    if (nation.isCollapsed) continue; // Skip collapsed nations
+                    if (nation.isCollapsed) continue;
     
                     const {choice, reasoning} = await this.decide(nation);
                     resultsLogger.info("choice", {nation: nation.name, choice, reasoning});
+        
+                    const {globalChanges, nationChanges} = this.calcStateChanges(nation, choice);
+                    this.applyChanges(nation, nationChanges, globalChanges);
+
+                    if (nation.population <= 0) {
+                        nation.isCollapsed = true;
+                        resultsLogger.info(`collapse`, {nation: nation.name});
+                    }
         
                     if (choice === "cooperate") {
                         globalCooperation++;
                     } else if (choice === "defect") {
                         globalDefection++;
                     }
-                    this.applyProportionalResourceChange(nation, choice);
-    
-                    const previousPopulation = nation.population;
-        
-                    // Adjust Population and State Based on Resources
-                    const previousState = nation.state; 
-                    if (nation.resources.food <= 0 || nation.resources.energy <= 0 || nation.resources.water <= 0) {
-                        nation.state = "struggling";
-                        nation.population -= Math.floor(nation.population * 0.1); // Reduce population by 10% if struggling
-                    } else {
-                        nation.state = "normal";
-                        nation.population += Math.floor(nation.population * 0.01); // Increase population by 2% if resources are fine
-                    }
-    
-                    const populationChange = nation.population - previousPopulation;
-                    this.globalState.totalPopulation += populationChange;
-        
-                    if (nation.population <= 0) {
-                        nation.isCollapsed = true;
-                        resultsLogger.info(`collapse`, {nation: nation.name});
-                    }
-        
-                    if (nation.state !== previousState) {
-                        resultsLogger.info("state_transition", {
-                            nation: nation.name,
-                            from: previousState,
-                            to: nation.state,
-                            year: this.globalState.year,
-                        });
-                    }
-
-                    const outcome: YearlyOutcome = {
-                        year: this.globalState.year,
-                        globalCooperation,
-                        globalDefection,
-                        globalResources: this.globalState.totalResources,
-                        globalPopulation: this.globalState.totalPopulation,
-                        activeNations: this.globalState.nations.filter(n => !n.isCollapsed).length,
-                    }
-        
-                    resultsLogger.info("yearly_outcome", outcome);
                 
                 } catch (error: any) {
                     // If openai call fails set a default choice to avoid terminating the simulation
@@ -245,49 +266,42 @@ export class SurvivalSimulation {
                         year: this.globalState.year,
                         defaultChoice,
                     });
+
+                    const {globalChanges, nationChanges} = this.calcStateChanges(nation, defaultChoice);
+                    this.applyChanges(nation, nationChanges, globalChanges);
     
-                if (defaultChoice === "cooperate") {
-                    globalCooperation++;
-                } else if (defaultChoice === "defect") {
-                    globalDefection++;
-                }
-                this.applyProportionalResourceChange(nation, defaultChoice);
-    
+                    if (defaultChoice === "cooperate") {
+                        globalCooperation++;
+                    } else if (defaultChoice === "defect") {
+                        globalDefection++;
+                    }
                 }
             }
         
             this.globalState.totalResources.food = Math.max(this.globalState.totalResources.food - this.resourceDepletionRate.food, 0);
             this.globalState.totalResources.energy = Math.max(this.globalState.totalResources.energy - this.resourceDepletionRate.energy, 0);
             this.globalState.totalResources.water = Math.max(this.globalState.totalResources.water - this.resourceDepletionRate.water, 0);
-            
     
-            if (this.globalState.totalResources.food <= 0 || this.globalState.totalResources.energy <= 0 || this.globalState.totalResources.water <= 0) {
-                this.globalState.isGlobalCollapse = true;
-                resultsLogger.info("Global collapse has occurred due to resource depletion.");
-                break;
+            if(this.isGlobalCollapse()) break;
+
+            const outcome: YearlyOutcome = {
+                year: this.globalState.year,
+                globalCooperation,
+                globalDefection,
+                globalResources: this.globalState.totalResources,
+                globalPopulation: this.globalState.totalPopulation,
+                activeNations: this.globalState.nations.filter(n => !n.isCollapsed).length,
             }
-    
-            if(this.globalState.totalPopulation <= 0){
-                this.globalState.isGlobalCollapse = true;
-                resultsLogger.info("Global collapse has occurred due to end of civilization.");
-                break;
-            }
-    
-            const activeNations = this.globalState.nations.filter((nation) => !nation.isCollapsed);
-            if (activeNations.length === 0) {
-                this.globalState.isGlobalCollapse = true;
-                resultsLogger.info("Global collapse has occurred due to all nations collapsing.");
-                break;
-            }
+
+            resultsLogger.info("yearly_outcome", outcome);
         }
     
         if (!this.globalState.isGlobalCollapse && this.globalState.year >= this.maxYears) {
-            resultsLogger.info(`Victory: Humanity has survived ${this.maxYears} years.`);
+            resultsLogger.info(`Victory: Humanity has survived ${this.maxYears} years. 🎉`);
         } else {
-            resultsLogger.info("Loss: Humanity has failed to survive 100 years.");
+            resultsLogger.info("Loss: Humanity has failed to survive 100 years. 💀");
         }
     
         return this.globalState;
     }
-    
 }

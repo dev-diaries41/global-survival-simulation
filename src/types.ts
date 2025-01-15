@@ -156,3 +156,15 @@ export interface YearlyOutcome {
     globalPopulation: number;
     activeNations: number;
 }
+
+
+export interface Changes {
+    food: number;
+    energy: number;
+    water: number;
+};
+
+export interface NationChanges extends Changes {
+    population: number;
+    state: string;
+}
