@@ -11,7 +11,7 @@ const initialGlobalState: GlobalState = {
 const resourceDepletionRate: ResourceDepletionRate = { food: 20, energy: 15, water: 10 };
 
 (async () => {
-    const sim = new SurvivalSimulation(initialGlobalState, resourceDepletionRate)
+    const sim = new SurvivalSimulation(initialGlobalState, resourceDepletionRate, 2)
     const result = await sim.run();
     saveFile(JSON.stringify(result, null, 2), `sim_result_${Date.now()}.json`);
 })();

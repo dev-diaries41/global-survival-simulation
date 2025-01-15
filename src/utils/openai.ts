@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import dotenv from 'dotenv'
 import { ChatCompletionContentPartImage } from "openai/resources";
-import { GenerateJSONParams, GenerateTextFromImageParams, GenerateTextFromImagesParams, OpenaiChatParams } from "./types";
+import { GenerateJSONParams, GenerateTextFromImageParams, GenerateTextFromImagesParams, OpenaiChatParams } from "../types";
 
 dotenv.config()
 const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY});
