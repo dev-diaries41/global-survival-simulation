@@ -230,54 +230,54 @@ export class SurvivalSimulation {
             this.globalState.year = year;
             let globalCooperation = 0;
             let globalDefection = 0;
-    
-            for (const nation of this.globalState.nations) {
-                try {
-                    if (nation.isCollapsed) continue;
-    
-                    const {choice, reasoning} = await this.decide(nation);
-                    resultsLogger.info("choice", {nation: nation.name, choice, reasoning});
-        
-                    const {globalChanges, nationChanges} = this.calcStateChanges(nation, choice);
-                    this.applyChanges(nation, nationChanges, globalChanges);
 
-                    if (nation.population <= 0) {
-                        nation.isCollapsed = true;
-                        resultsLogger.info(`collapse`, {nation: nation.name});
+            const results = await Promise.all(
+                this.globalState.nations.map(async (nation) => {
+                    if (nation.isCollapsed) return null;
+            
+                    try {
+                        const { choice, reasoning } = await this.decide(nation);
+                        resultsLogger.info("choice", { nation: nation.name, choice, reasoning });
+                        const { globalChanges, nationChanges } = this.calcStateChanges(nation, choice);
+                        return { nation, choice, globalChanges, nationChanges };
+                    } catch (error: any) {
+                        resultsLogger.error("decision_failure", {
+                            nation: nation.name,
+                            year: this.globalState.year,
+                            error: error.message || error,
+                        });
+            
+                        const defaultChoice = nation.state === "struggling" ? "defect" : "cooperate";
+                        const { globalChanges, nationChanges } = this.calcStateChanges(nation, defaultChoice);
+                        resultsLogger.warn("default_decision_applied", {
+                            nation: nation.name,
+                            year: this.globalState.year,
+                            defaultChoice,
+                        });
+            
+                        return { nation, choice: defaultChoice, globalChanges, nationChanges };
                     }
-        
+                })
+            )
+            
+            for (const result of results) {
+                if (result) {
+                    const { nation, choice, globalChanges, nationChanges } = result;
+                    this.applyChanges(nation, nationChanges, globalChanges);
+            
                     if (choice === "cooperate") {
                         globalCooperation++;
                     } else if (choice === "defect") {
                         globalDefection++;
                     }
-                
-                } catch (error: any) {
-                    // If openai call fails set a default choice to avoid terminating the simulation
-                    resultsLogger.error("decision_failure", {
-                        nation: nation.name,
-                        year: this.globalState.year,
-                        error: error.message || error,
-                    });
-    
-                    const defaultChoice = nation.state === "struggling" ? "defect" : "cooperate";
-                    resultsLogger.warn("default_decision_applied", {
-                        nation: nation.name,
-                        year: this.globalState.year,
-                        defaultChoice,
-                    });
-
-                    const {globalChanges, nationChanges} = this.calcStateChanges(nation, defaultChoice);
-                    this.applyChanges(nation, nationChanges, globalChanges);
-    
-                    if (defaultChoice === "cooperate") {
-                        globalCooperation++;
-                    } else if (defaultChoice === "defect") {
-                        globalDefection++;
+            
+                    if (nation.population <= 0) {
+                        nation.isCollapsed = true;
+                        resultsLogger.info(`collapse`, { nation: nation.name });
                     }
                 }
             }
-        
+            
             this.globalState.totalResources.food = Math.max(this.globalState.totalResources.food - this.resourceDepletionRate.food, 0);
             this.globalState.totalResources.energy = Math.max(this.globalState.totalResources.energy - this.resourceDepletionRate.energy, 0);
             this.globalState.totalResources.water = Math.max(this.globalState.totalResources.water - this.resourceDepletionRate.water, 0);
