@@ -2,7 +2,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { generateJSON } from "./utils/openai";
 import { z } from "zod";
 import { logger, resultsLogger } from "./logger";
-import { Choice, DecisionResult, GlobalState, Nation, NationChanges, Resources, SimulationOptions, YearlyOutcome } from "./types";
+import { Choice, DecisionResult, GlobalState, Nation, NationChanges, Resources, SimulationOptions, Outcome } from "./types";
 
 export class SurvivalSimulation {
     private globalState: GlobalState;
@@ -10,7 +10,7 @@ export class SurvivalSimulation {
     private contributionFactor: number;
     private defectGainFactor: number;
     private maxYears: number;
-    private onYearOutcome?: (outcome: YearlyOutcome) => void ;
+    private onYearOutcome?: (outcome: Outcome) => void ;
 
     constructor(globalState: GlobalState, options: SimulationOptions = {}){
         const {
@@ -244,7 +244,7 @@ export class SurvivalSimulation {
         this.globalState.totalResources.energy = Math.max(this.globalState.totalResources.energy - this.resourceDepletionRate.energy, 0);
         this.globalState.totalResources.water = Math.max(this.globalState.totalResources.water - this.resourceDepletionRate.water, 0);
 
-        const outcome: YearlyOutcome = {
+        const outcome: Outcome = {
             year: this.globalState.year,
             cooperations,
             defections,

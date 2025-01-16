@@ -148,7 +148,7 @@ interface NationSummary extends Pick<Nation, "name" | "population" | "state"> {
     choice: Choice;
 }
 
-export interface YearlyOutcome {
+export interface Outcome {
     year: number;
     cooperations: number;
     defections: number;
@@ -168,7 +168,7 @@ export interface SimulationOptions {
     maxYears?: number;
     contributionFactor?: number;
     defectGainFactor?: number;
-    onYearOutcome?: (outcome: YearlyOutcome) => void;
+    onYearOutcome?: (outcome: Outcome) => void;
   }
 
   export  interface DecisionResult  {
