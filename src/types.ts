@@ -130,19 +130,12 @@ export interface GlobalState {
     isGlobalCollapse: boolean;
 }
 
-// Annual depletion rates
-export interface ResourceDepletionRate {
-    food: number;
-    energy: number; 
-    water: number; 
-}
 
 export type NationCategory = "low" | "medium" | "high";
 
 export type NationState = "normal" | "struggling";
 
 export interface Nation {
-    id: number;
     name: string;
     resources: Resources;
     population: number;
@@ -151,7 +144,7 @@ export interface Nation {
     state: NationState;
 }
 
-interface NationSummary extends Pick<Nation, "id" | "population" | "state"> {
+interface NationSummary extends Pick<Nation, "name" | "population" | "state"> {
     choice: Choice;
 }
 
@@ -171,8 +164,19 @@ export interface NationChanges extends Resources {
 }
 
 export interface SimulationOptions {
+    resourceDepletionRate?: Resources
     maxYears?: number;
     contributionFactor?: number;
     defectGainFactor?: number;
     onYearOutcome?: (outcome: YearlyOutcome) => void;
+  }
+
+  export  interface DecisionResult  {
+    nation: Nation;
+    choice: string;
+    globalChanges: Resources;
+    nationChanges: Resources & {
+        population: number;
+        state: string;
+    };
 }

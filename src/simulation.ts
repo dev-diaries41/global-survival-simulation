@@ -2,19 +2,19 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { generateJSON } from "./utils/openai";
 import { z } from "zod";
 import { logger, resultsLogger } from "./logger";
-import { Choice, GlobalState, Nation, NationChanges, ResourceDepletionRate, Resources, SimulationOptions, YearlyOutcome } from "./types";
-
+import { Choice, DecisionResult, GlobalState, Nation, NationChanges, Resources, SimulationOptions, YearlyOutcome } from "./types";
 
 export class SurvivalSimulation {
     private globalState: GlobalState;
-    private resourceDepletionRate: ResourceDepletionRate;
+    private resourceDepletionRate: Resources;
     private contributionFactor: number;
     private defectGainFactor: number;
     private maxYears: number;
     private onYearOutcome?: (outcome: YearlyOutcome) => void ;
 
-    constructor(globalState: GlobalState, resourceDepletionRate: ResourceDepletionRate, options: SimulationOptions = {}){
+    constructor(globalState: GlobalState, options: SimulationOptions = {}){
         const {
+            resourceDepletionRate = { food: 20, energy: 15, water: 10 },
             maxYears = 10,
             contributionFactor = 0.05, 
             defectGainFactor = 0.1,
@@ -27,21 +27,17 @@ export class SurvivalSimulation {
         this.defectGainFactor= defectGainFactor;
         this.contributionFactor = contributionFactor;
         this.onYearOutcome = onYearOutcome;
-        
         if(globalState.nations.length === 0){
-            this.globalState.nations = this.generateNations();
+            this.globalState.nations = SurvivalSimulation.generateNations(8);
         }
     }
 
-
-    private generateNations(): Nation[] {
-        const totalNations = 9; 
+    static generateNations(n: number): Nation[] {
+        const totalNations = n; 
         const categories = ["low", "medium", "high"] as const;
         const resourceRatios = { low: 1, medium: 2, high: 4 }; 
-    
         const baseResources = 100;
         const basePopulation = 1_000_000_000;
-    
         const nations: Nation[] = [];
         let idCounter = 0;
     
@@ -56,7 +52,6 @@ export class SurvivalSimulation {
                 idCounter++
     
                 const nation: Nation = {
-                    id: idCounter,
                     name: `Nation ${idCounter}`,
                     resources,
                     population: basePopulation,
@@ -131,29 +126,6 @@ export class SurvivalSimulation {
         }
     }
 
-    private applyChanges(nation: Nation, nationChanges: NationChanges, globalChanges: Resources) {
-        if (nation.state !== nationChanges.state) {
-            resultsLogger.info("state_transition", {
-                nation: nation.name,
-                from: nation.state,
-                to: nationChanges.state,
-                year: this.globalState.year,
-            });
-        }
-    
-        nation.resources.food = Math.max(nation.resources.food + nationChanges.food, 0);
-        nation.resources.energy = Math.max(nation.resources.energy + nationChanges.energy, 0);
-        nation.resources.water = Math.max(nation.resources.water + nationChanges.water, 0);
-        nation.population += nationChanges.population;
-        nation.state = nationChanges.state as Nation['state'];
-    
-        this.globalState.totalResources.energy = Math.max(this.globalState.totalResources.energy + globalChanges.energy, 0);
-        this.globalState.totalResources.food = Math.max(this.globalState.totalResources.food + globalChanges.food, 0);
-        this.globalState.totalResources.water = Math.max(this.globalState.totalResources.water + globalChanges.water, 0);
-        this.globalState.totalPopulation += nationChanges.population;
-    }
-    
-    
     
     private async decide(nation: Nation): Promise<{ choice: Choice; reasoning: string }> {
         const systemPrompt = `
@@ -213,27 +185,73 @@ export class SurvivalSimulation {
         return { choice: res.choice, reasoning: res.reasoning };
     }
 
-    private isGlobalCollapse():boolean {
+    private isSimulationOver():boolean {
         const globalResourcesDepleted = this.globalState.totalResources.food <= 0 || this.globalState.totalResources.energy <= 0 || this.globalState.totalResources.water <= 0;
         const extinct = this.globalState.totalPopulation <= 0;
         const allNationsCollapsed = this.globalState.nations.filter((nation) => !nation.isCollapsed).length === 0;
 
         if (globalResourcesDepleted || extinct || allNationsCollapsed) {
             resultsLogger.info("Global collapse has occurred 💀");
-            return true;
         }
-        return false;
+        return globalResourcesDepleted || extinct || allNationsCollapsed;
     }
 
-    public async run(): Promise<GlobalState> {
+    private updateEntity(nation: Nation, nationChanges: NationChanges) {
+        if (nation.state !== nationChanges.state) {
+            resultsLogger.info("state_transition", {
+                nation: nation.name,
+                from: nation.state,
+                to: nationChanges.state,
+                year: this.globalState.year,
+            });
+        }
     
+        nation.resources.food = Math.max(nation.resources.food + nationChanges.food, 0);
+        nation.resources.energy = Math.max(nation.resources.energy + nationChanges.energy, 0);
+        nation.resources.water = Math.max(nation.resources.water + nationChanges.water, 0);
+        nation.population += nationChanges.population;
+        nation.state = nationChanges.state as Nation['state'];
+    
+        if (nation.population <= 0) {
+            nation.isCollapsed = true;
+            resultsLogger.info(`collapse`, { nation: nation.name });
+        }
+    }   
+
+    private updateEnvironment(results: (DecisionResult | null)[]) {
+        let stepCooperations = 0;
+        let stepDefections = 0;
+    
+        for (const result of results) {
+            if (result) {
+                const { choice, globalChanges, nationChanges } = result;
+                this.globalState.totalResources.energy = Math.max(this.globalState.totalResources.energy + globalChanges.energy, 0);
+                this.globalState.totalResources.food = Math.max(this.globalState.totalResources.food + globalChanges.food, 0);
+                this.globalState.totalResources.water = Math.max(this.globalState.totalResources.water + globalChanges.water, 0);
+                this.globalState.totalPopulation += nationChanges.population;
+    
+                if (choice === "cooperate") {
+                    stepCooperations++;
+                } else if (choice === "defect") {
+                    stepDefections++;
+                }
+            }
+        }
+    
+        this.globalState.totalResources.food = Math.max(this.globalState.totalResources.food - this.resourceDepletionRate.food, 0);
+        this.globalState.totalResources.energy = Math.max(this.globalState.totalResources.energy - this.resourceDepletionRate.energy, 0);
+        this.globalState.totalResources.water = Math.max(this.globalState.totalResources.water - this.resourceDepletionRate.water, 0);
+        return {stepCooperations, stepDefections}
+    }
+    
+    public async run(): Promise<GlobalState> {
         for (let year = 1; year <= this.maxYears; year++) {
-            
             resultsLogger.info(`Year ${year} begins`);
             this.globalState.year = year;
+            
             let globalCooperation = 0;
             let globalDefection = 0;
-            let nationChoice = "";  // needs to be initialised for use in yearly outcome
+            const nationChoices: { [nationName: string]: Choice } = {};
 
             const results = await Promise.all(
                 this.globalState.nations.map(async (nation) => {
@@ -266,28 +284,17 @@ export class SurvivalSimulation {
             
             for (const result of results) {
                 if (result) {
-                    const { nation, choice, globalChanges, nationChanges } = result;
-                    nationChoice = choice; 
-                    this.applyChanges(nation, nationChanges, globalChanges);
-            
-                    if (choice === "cooperate") {
-                        globalCooperation++;
-                    } else if (choice === "defect") {
-                        globalDefection++;
-                    }
-            
-                    if (nation.population <= 0) {
-                        nation.isCollapsed = true;
-                        resultsLogger.info(`collapse`, { nation: nation.name });
-                    }
+                    const { nation, choice, nationChanges } = result;
+                    nationChoices[nation.name] = choice as Choice;
+                    this.updateEntity(nation, nationChanges);
                 }
             }
-            
-            this.globalState.totalResources.food = Math.max(this.globalState.totalResources.food - this.resourceDepletionRate.food, 0);
-            this.globalState.totalResources.energy = Math.max(this.globalState.totalResources.energy - this.resourceDepletionRate.energy, 0);
-            this.globalState.totalResources.water = Math.max(this.globalState.totalResources.water - this.resourceDepletionRate.water, 0);
-    
-            if(this.isGlobalCollapse()) break;
+
+            const {stepCooperations, stepDefections} = this.updateEnvironment(results);
+            globalCooperation += stepCooperations;
+            globalDefection += stepDefections;
+        
+            if(this.isSimulationOver()) break;
 
             const outcome: YearlyOutcome = {
                 year: this.globalState.year,
@@ -298,10 +305,10 @@ export class SurvivalSimulation {
                 nations: this.globalState.nations
                 .filter(n => !n.isCollapsed)
                 .map(nation => ({
-                    id: nation.id,
+                    name: nation.name,
                     population: nation.population,
                     state: nation.state,
-                    choice: nationChoice as Choice
+                    choice: nationChoices[nation.name],
                 })),
             }
             resultsLogger.info("yearly_outcome", outcome);

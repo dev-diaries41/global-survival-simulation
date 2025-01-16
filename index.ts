@@ -1,4 +1,4 @@
-import { SurvivalSimulation, GlobalState, ResourceDepletionRate, saveFile  } from "./src";
+import { SurvivalSimulation, GlobalState, saveFile  } from "./src";
 
 const initialGlobalState: GlobalState = {
     year: 0,
@@ -8,10 +8,8 @@ const initialGlobalState: GlobalState = {
     isGlobalCollapse: false,
 };
 
-const resourceDepletionRate: ResourceDepletionRate = { food: 20, energy: 15, water: 10 };
-
 (async () => {
-    const sim = new SurvivalSimulation(initialGlobalState, resourceDepletionRate, 2)
+    const sim = new SurvivalSimulation(initialGlobalState)
     const result = await sim.run();
     saveFile(JSON.stringify(result, null, 2), `sim_result_${Date.now()}.json`);
 })();
