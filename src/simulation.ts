@@ -219,21 +219,23 @@ export class SurvivalSimulation {
     }   
 
     private updateEnvironment(results: (DecisionResult | null)[]) {
-        let stepCooperations = 0;
-        let stepDefections = 0;
-    
+        let cooperations = 0;
+        let defections = 0;
+        const nationChoices: { [nationName: string]: Choice } = {};
+
         for (const result of results) {
             if (result) {
-                const { choice, globalChanges, nationChanges } = result;
+                const { nation, choice, globalChanges, nationChanges } = result;
+                nationChoices[nation.name] = choice as Choice;
                 this.globalState.totalResources.energy = Math.max(this.globalState.totalResources.energy + globalChanges.energy, 0);
                 this.globalState.totalResources.food = Math.max(this.globalState.totalResources.food + globalChanges.food, 0);
                 this.globalState.totalResources.water = Math.max(this.globalState.totalResources.water + globalChanges.water, 0);
                 this.globalState.totalPopulation += nationChanges.population;
     
                 if (choice === "cooperate") {
-                    stepCooperations++;
+                    cooperations++;
                 } else if (choice === "defect") {
-                    stepDefections++;
+                    defections++;
                 }
             }
         }
@@ -241,18 +243,31 @@ export class SurvivalSimulation {
         this.globalState.totalResources.food = Math.max(this.globalState.totalResources.food - this.resourceDepletionRate.food, 0);
         this.globalState.totalResources.energy = Math.max(this.globalState.totalResources.energy - this.resourceDepletionRate.energy, 0);
         this.globalState.totalResources.water = Math.max(this.globalState.totalResources.water - this.resourceDepletionRate.water, 0);
-        return {stepCooperations, stepDefections}
+
+        const outcome: YearlyOutcome = {
+            year: this.globalState.year,
+            cooperations,
+            defections,
+            globalResources: this.globalState.totalResources,
+            globalPopulation: this.globalState.totalPopulation,
+            nations: this.globalState.nations
+            .filter(n => !n.isCollapsed)
+            .map(nation => ({
+                name: nation.name,
+                population: nation.population,
+                state: nation.state,
+                choice: nationChoices[nation.name],
+            })),
+        }
+        resultsLogger.info("yearly_outcome", outcome);
+        return outcome;
     }
     
     public async run(): Promise<GlobalState> {
         for (let year = 1; year <= this.maxYears; year++) {
             resultsLogger.info(`Year ${year} begins`);
             this.globalState.year = year;
-            
-            let globalCooperation = 0;
-            let globalDefection = 0;
-            const nationChoices: { [nationName: string]: Choice } = {};
-
+        
             const results = await Promise.all(
                 this.globalState.nations.map(async (nation) => {
                     if (nation.isCollapsed) return null;
@@ -284,35 +299,15 @@ export class SurvivalSimulation {
             
             for (const result of results) {
                 if (result) {
-                    const { nation, choice, nationChanges } = result;
-                    nationChoices[nation.name] = choice as Choice;
+                    const { nation, nationChanges } = result;
                     this.updateEntity(nation, nationChanges);
                 }
             }
 
-            const {stepCooperations, stepDefections} = this.updateEnvironment(results);
-            globalCooperation += stepCooperations;
-            globalDefection += stepDefections;
-        
-            if(this.isSimulationOver()) break;
-
-            const outcome: YearlyOutcome = {
-                year: this.globalState.year,
-                globalCooperation,
-                globalDefection,
-                globalResources: this.globalState.totalResources,
-                globalPopulation: this.globalState.totalPopulation,
-                nations: this.globalState.nations
-                .filter(n => !n.isCollapsed)
-                .map(nation => ({
-                    name: nation.name,
-                    population: nation.population,
-                    state: nation.state,
-                    choice: nationChoices[nation.name],
-                })),
-            }
-            resultsLogger.info("yearly_outcome", outcome);
+            const outcome = this.updateEnvironment(results);
             this.onYearOutcome?.(outcome);
+
+            if(this.isSimulationOver()) break;
         }
     
         if (!this.globalState.isGlobalCollapse && this.globalState.year >= this.maxYears) {

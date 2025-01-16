@@ -150,8 +150,8 @@ interface NationSummary extends Pick<Nation, "name" | "population" | "state"> {
 
 export interface YearlyOutcome {
     year: number;
-    globalCooperation: number;
-    globalDefection: number;
+    cooperations: number;
+    defections: number;
     globalResources: Resources;
     globalPopulation: number;
     nations: NationSummary[];
