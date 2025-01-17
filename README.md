@@ -4,7 +4,7 @@
 
 ## Overview
 
-The **Global Survival Simulation** is a resource-management game modeled to simulate global and national decision-making. It demonstrates the delicate balance between cooperation and defection within a group of nations striving to ensure their survival, as well as humanity's survival as a whole. The simulation explores decision-making dynamics in the face of finite resources and the risk of global collapse.
+The **Global Survival Simulation** is a resource-management game modeled to simulate global and national decision-making. It demonstrates the delicate balance between cooperation and defection within a group of entities striving to ensure their survival, as well as humanity's survival as a whole. The simulation explores decision-making dynamics in the face of finite resources and the risk of global collapse.
 
 ---
 
@@ -34,7 +34,7 @@ The **Global Survival Simulation** is a resource-management game modeled to simu
 - **Dynamic Nation Generation**: Nations are dynamically generated with unique attributes.  
 - **Resource Management**: Nations manage food, energy, and water resources.  
 - **Decision-Making**: Nations make decisions to cooperate or defect based on their state and global context.  
-- **Global Collapse Scenarios**: Tracks global collapse due to resource depletion, population decline, or the collapse of all nations.  
+- **Global Collapse Scenarios**: Tracks global collapse due to resource depletion, population decline, or the collapse of all entities.  
 - **AI-Assisted Decision-Making**: Each nation's leader is simulated as an AI making decisions based on contextual prompts.
 
 ---
@@ -53,7 +53,7 @@ Each nation has the following attributes:
 
 ### Global Resources
 
-- **Food, Energy, and Water**: Shared resources available to all nations.  
+- **Food, Energy, and Water**: Shared resources available to all entities.  
 - **Depletion Rates**: Fixed annual reductions to global resources.
 
 ### Decision-Making
@@ -66,14 +66,14 @@ Each nation evaluates whether to:
 
 ## Simulation Workflow
 
-1. **Initialize Simulation**: Generate nations and assign starting resources.  
+1. **Initialize Simulation**: Generate entities and assign starting resources.  
 2. **Annual Decision Cycle**:  
    - Each nation decides to cooperate or defect based on its resources and global state.  
    - Resources are adjusted based on decisions.  
    - Nations with depleted resources or populations collapse.  
 3. **Apply Global Depletion**: Reduce global resources based on fixed depletion rates.  
 4. **Check for Collapse Conditions**:  
-   - Global collapse occurs if all nations collapse or if global resources are depleted.  
+   - Global collapse occurs if all entities collapse or if global resources are depleted.  
    - Victory is declared if humanity survives 50 years.  
 5. **Save Results**: Simulation results are saved to a JSON file.
 

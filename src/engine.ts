@@ -12,19 +12,19 @@ abstract class SimulationEngine<Entity, Environment, Outcome> {
     }
 
     // Abstract method to decide an action for each entity in each step.
-    abstract decide(entity: Entity): Promise<string>;
+    protected abstract decide<T extends string>(entity: Entity): Promise<T>;
 
     // Abstract method to calculate the changes based on the decision.
-    abstract calculateChanges(entity: Entity, decision: string): { entityChanges: Partial<Entity>; environmentChanges: Partial<Environment> };
+    protected abstract calcStateChanges(entity: Entity, decision: string): { entityChanges: Record<string, any>; environmentChanges: Record<string, any> };
 
     // Abstract method to apply the changes after a decision.
-    abstract applyChanges(entity: Entity, entityChanges: Partial<Entity>, environmentChanges: Partial<Environment>): void;
+    protected abstract updateEntity(entity: Entity, entityChanges: Record<string, any>): void;
 
     // Abstract method to update the environment after the step.
-    abstract updateEnvironment(): void;
+    protected abstract updateEnvironment(results: (Record<string, any>|null)[]): Outcome;
 
     // Method to check if the simulation has ended
-    abstract isSimulationOver(): boolean;
+    protected  abstract isSimulationOver(): boolean;
 
     // Run the simulation for the defined steps.
     abstract  run (): Promise<Environment>;

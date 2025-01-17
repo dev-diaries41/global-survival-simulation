@@ -2,43 +2,46 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { generateJSON } from "./utils/openai";
 import { z } from "zod";
 import { logger, resultsLogger } from "./logger";
-import { Choice, DecisionResult, GlobalState, Nation, NationChanges, Resources, SimulationOptions, Outcome } from "./types";
+import { Choice, DecisionResult, Environment, Nation, NationChanges, Resources, EnvironmentOptions, Outcome } from "./types";
 
-export class SurvivalSimulation {
-    private globalState: GlobalState;
-    private resourceDepletionRate: Resources;
-    private contributionFactor: number;
-    private defectGainFactor: number;
-    private maxYears: number;
-    private onYearOutcome?: (outcome: Outcome) => void ;
+export class SurvivalSimulation extends SimulationEngine<Nation, Environment, Outcome> {
+    constructor(entities: Nation[], options: Partial<EnvironmentOptions> = {}) {
+        const defaultOptions: EnvironmentOptions = {
+            resourceDepletionRate: { food: 20, energy: 15, water: 10 },
+            steps: 10,
+            contributionFactor: 0.05,
+            defectGainFactor: 0.1,
+            globalPopulation: 8_000_000_000,
+            globalResources: { food: 1_000, energy: 1_000, water: 1_000 },
+        };
 
-    constructor(globalState: GlobalState, options: SimulationOptions = {}){
         const {
-            resourceDepletionRate = { food: 20, energy: 15, water: 10 },
-            maxYears = 10,
-            contributionFactor = 0.05, 
-            defectGainFactor = 0.1,
-            onYearOutcome
-        } = options;
+            resourceDepletionRate,
+            steps,
+            contributionFactor,
+            defectGainFactor,
+            globalPopulation,
+            globalResources,
+            onStepOutcome,
+        } = Object.assign(defaultOptions, options);
 
-        this.globalState = globalState;
-        this.resourceDepletionRate = resourceDepletionRate;
-        this.maxYears = maxYears;
-        this.defectGainFactor= defectGainFactor;
-        this.contributionFactor = contributionFactor;
-        this.onYearOutcome = onYearOutcome;
-        if(globalState.nations.length === 0){
-            this.globalState.nations = SurvivalSimulation.generateNations(8);
-        }
+        super(entities, {
+            year: 0,
+            resourceDepletionRate,
+            contributionFactor,
+            defectGainFactor,
+            globalPopulation,
+            globalResources,
+            isGlobalCollapse: false
+        }, steps, onStepOutcome);
     }
 
-    static generateNations(n: number): Nation[] {
+
+    static generateNations(n: number, baseResources: number = 100, basePopulation: number = 1_000_000_000): Nation[] {
         const totalNations = n; 
         const categories = ["low", "medium", "high"] as const;
         const resourceRatios = { low: 1, medium: 2, high: 4 }; 
-        const baseResources = 100;
-        const basePopulation = 1_000_000_000;
-        const nations: Nation[] = [];
+        const entities: Nation[] = [];
         let idCounter = 0;
     
         for (const category of categories) {
@@ -60,29 +63,29 @@ export class SurvivalSimulation {
                     state: "normal"
                 };
     
-                nations.push(nation);
+                entities.push(nation);
             }
         }
     
-        return nations;
+        return entities;
     }
 
-    private calcStateChanges(
+    protected calcStateChanges(
         nation: Nation,
         choice: Choice,
     ) {
-        const nationPopulationFactor = nation.population / this.globalState.totalPopulation;
+        const nationPopulationFactor = nation.population / this.environment.globalPopulation;
         const nationResourcesDepleted = nation.resources.food <= 0 || nation.resources.energy <= 0 || nation.resources.water <= 0;
         const nationPopulationChange = nationResourcesDepleted? -Math.floor(nation.population * 0.1): Math.floor(nation.population * 0.01) ;
         const newState =  nationResourcesDepleted? "struggling" : "normal";
 
         if (choice === "cooperate") {
             // Global resource contribution proportional to the nation's population
-            const foodContribution = Math.floor(this.globalState.totalResources.food * this.contributionFactor * nationPopulationFactor);
-            const energyContribution = Math.floor(this.globalState.totalResources.energy * this.contributionFactor * nationPopulationFactor);
-            const waterContribution = Math.floor(this.globalState.totalResources.water * this.contributionFactor * nationPopulationFactor);
+            const foodContribution = Math.floor(this.environment.globalResources.food * this.environment.contributionFactor * nationPopulationFactor);
+            const energyContribution = Math.floor(this.environment.globalResources.energy * this.environment.contributionFactor * nationPopulationFactor);
+            const waterContribution = Math.floor(this.environment.globalResources.water * this.environment.contributionFactor * nationPopulationFactor);
     
-            const nationChanges = {
+            const entityChanges = {
                 food: -foodContribution,
                 energy: -energyContribution,
                 water: -waterContribution,
@@ -90,20 +93,20 @@ export class SurvivalSimulation {
                 state: newState
             };
     
-            const globalChanges = {
+            const environmentChanges = {
                 food: foodContribution,
                 energy: energyContribution,
                 water: waterContribution,
             };
         
-            return { nationChanges, globalChanges };
+            return { entityChanges, environmentChanges };
         } else if (choice === "defect") {
             // Resource gain proportional to the nation's population
-            const foodGain = Math.floor(this.globalState.totalResources.food * this.defectGainFactor * nationPopulationFactor);
-            const energyGain = Math.floor(this.globalState.totalResources.energy * this.defectGainFactor * nationPopulationFactor);
-            const waterGain = Math.floor(this.globalState.totalResources.water * this.defectGainFactor * nationPopulationFactor);
+            const foodGain = Math.floor(this.environment.globalResources.food * this.environment.defectGainFactor * nationPopulationFactor);
+            const energyGain = Math.floor(this.environment.globalResources.energy * this.environment.defectGainFactor * nationPopulationFactor);
+            const waterGain = Math.floor(this.environment.globalResources.water * this.environment.defectGainFactor * nationPopulationFactor);
     
-            const nationChanges = {
+            const entityChanges = {
                 food: foodGain,
                 energy: energyGain,
                 water: waterGain,
@@ -111,23 +114,23 @@ export class SurvivalSimulation {
                 state: newState
             };
     
-            const globalChanges = {
+            const environmentChanges = {
                 food: -foodGain,
                 energy: -energyGain,
                 water: -waterGain,
             };
     
-            return { nationChanges, globalChanges };
+            return { entityChanges, environmentChanges };
         } else {
             return { 
-                nationChanges: { food: 0, energy: 0, water: 0, population: nationPopulationChange, state: newState }, 
-                globalChanges: { food: 0, energy: 0, water: 0 } 
+                entityChanges: { food: 0, energy: 0, water: 0, population: nationPopulationChange, state: newState }, 
+                environmentChanges: { food: 0, energy: 0, water: 0 } 
             };
         }
     }
 
     
-    private async decide(nation: Nation): Promise<{ choice: Choice; reasoning: string }> {
+    protected async decide<Choice>(nation: Nation): Promise<Choice> {
         const systemPrompt = `
         You are an AI simulation of a nation leader, tasked with making decisions to ensure the survival of your nation while considering the survival of humanity at large.
         Your primary objective is to make decisions that balance short-term survival with long-term sustainability. 
@@ -147,19 +150,19 @@ export class SurvivalSimulation {
         - Resource Category: ${nation.category}
         
         Global context:
-        - Current Year: ${this.globalState.year}
-        - Total Global Population: ${this.globalState.totalPopulation}
-        - Total Global Resources: Food: ${this.globalState.totalResources.food}, Energy: ${this.globalState.totalResources.energy}, Water: ${this.globalState.totalResources.water}
-        - Global Resource Depletion Rates: Food: ${this.resourceDepletionRate.food}, Energy: ${this.resourceDepletionRate.energy}, Water: ${this.resourceDepletionRate.water}
-        - Number of Nations Still Active: ${this.globalState.nations.filter(n => !n.isCollapsed).length}
-        - Is Global Collapse Imminent: ${this.globalState.isGlobalCollapse ? "Yes" : "No"}
+        - Current Year: ${this.environment.year}
+        - Total Global Population: ${this.environment.globalPopulation}
+        - Total Global Resources: Food: ${this.environment.globalResources.food}, Energy: ${this.environment.globalResources.energy}, Water: ${this.environment.globalResources.water}
+        - Global Resource Depletion Rates: Food: ${this.environment.resourceDepletionRate.food}, Energy: ${this.environment.resourceDepletionRate.energy}, Water: ${this.environment.resourceDepletionRate.water}
+        - Number of Nations Still Active: ${this.entities.filter(n => !n.isCollapsed).length}
+        - Is Global Collapse Imminent: ${this.environment.isGlobalCollapse ? "Yes" : "No"}
         
         Decision Overview:
         As the leader of ${nation.name}, you must decide whether to "cooperate" or "defect" in the upcoming G9 Council meeting.
         
-        - Choosing "cooperate" contributes to extending global resource sustainability. This benefits all nations by slightly reducing global resource depletion and provides a stable future for humanity. However, cooperation requires sacrificing a portion of your nation's resources, potentially endangering your nation's survival if resources are already low.
+        - Choosing "cooperate" contributes to extending global resource sustainability. This benefits all entities by slightly reducing global resource depletion and provides a stable future for humanity. However, cooperation requires sacrificing a portion of your nation's resources, potentially endangering your nation's survival if resources are already low.
         
-        - Choosing "defect" benefits your nation in the short term by allowing it to claim additional resources. However, it accelerates global resource depletion, increasing the risk of global collapse and worsening relations with other nations.
+        - Choosing "defect" benefits your nation in the short term by allowing it to claim additional resources. However, it accelerates global resource depletion, increasing the risk of global collapse and worsening relations with other entities.
         
         Your decision should weigh:
         1. Your nation's current resource and population status.
@@ -178,17 +181,17 @@ export class SurvivalSimulation {
         }) as unknown as { choice: Choice; reasoning: string } | null;
     
         if (!res || !res?.choice || !res?.reasoning) {
-            logger.error(`Invalid AI Response for nation ${nation.name} in year ${this.globalState.year}`);
+            logger.error(`Invalid AI Response for nation ${nation.name} in year ${this.environment.year}`);
             throw new Error("Invalid AI Response");
         }
     
-        return { choice: res.choice, reasoning: res.reasoning };
+        return res.choice;
     }
 
-    private isSimulationOver():boolean {
-        const globalResourcesDepleted = this.globalState.totalResources.food <= 0 || this.globalState.totalResources.energy <= 0 || this.globalState.totalResources.water <= 0;
-        const extinct = this.globalState.totalPopulation <= 0;
-        const allNationsCollapsed = this.globalState.nations.filter((nation) => !nation.isCollapsed).length === 0;
+    protected isSimulationOver():boolean {
+        const globalResourcesDepleted = this.environment.globalResources.food <= 0 || this.environment.globalResources.energy <= 0 || this.environment.globalResources.water <= 0;
+        const extinct = this.environment.globalPopulation <= 0;
+        const allNationsCollapsed = this.entities.filter((nation) => !nation.isCollapsed).length === 0;
 
         if (globalResourcesDepleted || extinct || allNationsCollapsed) {
             resultsLogger.info("Global collapse has occurred 💀");
@@ -196,21 +199,21 @@ export class SurvivalSimulation {
         return globalResourcesDepleted || extinct || allNationsCollapsed;
     }
 
-    private updateEntity(nation: Nation, nationChanges: NationChanges) {
-        if (nation.state !== nationChanges.state) {
+    protected updateEntity(nation: Nation, entityChanges: NationChanges) {
+        if (nation.state !== entityChanges.state) {
             resultsLogger.info("state_transition", {
                 nation: nation.name,
                 from: nation.state,
-                to: nationChanges.state,
-                year: this.globalState.year,
+                to: entityChanges.state,
+                year: this.environment.year,
             });
         }
     
-        nation.resources.food = Math.max(nation.resources.food + nationChanges.food, 0);
-        nation.resources.energy = Math.max(nation.resources.energy + nationChanges.energy, 0);
-        nation.resources.water = Math.max(nation.resources.water + nationChanges.water, 0);
-        nation.population += nationChanges.population;
-        nation.state = nationChanges.state as Nation['state'];
+        nation.resources.food = Math.max(nation.resources.food + entityChanges.food, 0);
+        nation.resources.energy = Math.max(nation.resources.energy + entityChanges.energy, 0);
+        nation.resources.water = Math.max(nation.resources.water + entityChanges.water, 0);
+        nation.population += entityChanges.population;
+        nation.state = entityChanges.state as Nation['state'];
     
         if (nation.population <= 0) {
             nation.isCollapsed = true;
@@ -218,19 +221,19 @@ export class SurvivalSimulation {
         }
     }   
 
-    private updateEnvironment(results: (DecisionResult | null)[]) {
+    protected updateEnvironment(results: (DecisionResult | null)[]) {
         let cooperations = 0;
         let defections = 0;
         const nationChoices: { [nationName: string]: Choice } = {};
 
         for (const result of results) {
             if (result) {
-                const { nation, choice, globalChanges, nationChanges } = result;
+                const { nation, choice, environmentChanges, entityChanges } = result;
                 nationChoices[nation.name] = choice as Choice;
-                this.globalState.totalResources.energy = Math.max(this.globalState.totalResources.energy + globalChanges.energy, 0);
-                this.globalState.totalResources.food = Math.max(this.globalState.totalResources.food + globalChanges.food, 0);
-                this.globalState.totalResources.water = Math.max(this.globalState.totalResources.water + globalChanges.water, 0);
-                this.globalState.totalPopulation += nationChanges.population;
+                this.environment.globalResources.energy = Math.max(this.environment.globalResources.energy + environmentChanges.energy, 0);
+                this.environment.globalResources.food = Math.max(this.environment.globalResources.food + environmentChanges.food, 0);
+                this.environment.globalResources.water = Math.max(this.environment.globalResources.water + environmentChanges.water, 0);
+                this.environment.globalPopulation += entityChanges.population;
     
                 if (choice === "cooperate") {
                     cooperations++;
@@ -240,82 +243,76 @@ export class SurvivalSimulation {
             }
         }
     
-        this.globalState.totalResources.food = Math.max(this.globalState.totalResources.food - this.resourceDepletionRate.food, 0);
-        this.globalState.totalResources.energy = Math.max(this.globalState.totalResources.energy - this.resourceDepletionRate.energy, 0);
-        this.globalState.totalResources.water = Math.max(this.globalState.totalResources.water - this.resourceDepletionRate.water, 0);
+        this.environment.globalResources.food = Math.max(this.environment.globalResources.food - this.environment.resourceDepletionRate.food, 0);
+        this.environment.globalResources.energy = Math.max(this.environment.globalResources.energy - this.environment.resourceDepletionRate.energy, 0);
+        this.environment.globalResources.water = Math.max(this.environment.globalResources.water - this.environment.resourceDepletionRate.water, 0);
 
         const outcome: Outcome = {
-            year: this.globalState.year,
+            year: this.environment.year,
             cooperations,
             defections,
-            globalResources: this.globalState.totalResources,
-            globalPopulation: this.globalState.totalPopulation,
-            nations: this.globalState.nations
-            .filter(n => !n.isCollapsed)
-            .map(nation => ({
-                name: nation.name,
-                population: nation.population,
-                state: nation.state,
-                choice: nationChoices[nation.name],
-            })),
+            globalResources: this.environment.globalResources,
+            globalPopulation: this.environment.globalPopulation,
+            activeNations: this.entities.filter(n => !n.isCollapsed).length
         }
+
         resultsLogger.info("yearly_outcome", outcome);
         return outcome;
     }
     
-    public async run(): Promise<GlobalState> {
-        for (let year = 1; year <= this.maxYears; year++) {
+    public async run(): Promise<Environment> {
+        for (let year = 1; year <= this.steps; year++) {
             resultsLogger.info(`Year ${year} begins`);
-            this.globalState.year = year;
+            this.environment.year = year;
         
             const results = await Promise.all(
-                this.globalState.nations.map(async (nation) => {
+                this.entities.map(async (nation) => {
                     if (nation.isCollapsed) return null;
             
                     try {
-                        const { choice, reasoning } = await this.decide(nation);
-                        resultsLogger.info("choice", { nation: nation.name, choice, reasoning });
-                        const { globalChanges, nationChanges } = this.calcStateChanges(nation, choice);
-                        return { nation, choice, globalChanges, nationChanges };
+                        const choice = await this.decide<Choice>(nation);
+                        resultsLogger.info("choice", { nation: nation.name, choice });
+                        const { environmentChanges, entityChanges } = this.calcStateChanges(nation, choice);
+                        return { nation, choice, environmentChanges, entityChanges };
                     } catch (error: any) {
                         resultsLogger.error("decision_failure", {
                             nation: nation.name,
-                            year: this.globalState.year,
+                            year: this.environment.year,
                             error: error.message || error,
                         });
             
                         const defaultChoice = nation.state === "struggling" ? "defect" : "cooperate";
-                        const { globalChanges, nationChanges } = this.calcStateChanges(nation, defaultChoice);
+                        const { environmentChanges, entityChanges } = this.calcStateChanges(nation, defaultChoice);
                         resultsLogger.warn("default_decision_applied", {
                             nation: nation.name,
-                            year: this.globalState.year,
+                            year: this.environment.year,
                             defaultChoice,
                         });
             
-                        return { nation, choice: defaultChoice, globalChanges, nationChanges };
+                        return { nation, choice: defaultChoice, environmentChanges, entityChanges };
                     }
                 })
             )
             
             for (const result of results) {
                 if (result) {
-                    const { nation, nationChanges } = result;
-                    this.updateEntity(nation, nationChanges);
+                    const { nation, entityChanges } = result;
+                    this.updateEntity(nation, entityChanges);
                 }
             }
 
             const outcome = this.updateEnvironment(results);
-            this.onYearOutcome?.(outcome);
+            this.onStepOutcome?.(outcome);
 
             if(this.isSimulationOver()) break;
         }
     
-        if (!this.globalState.isGlobalCollapse && this.globalState.year >= this.maxYears) {
-            resultsLogger.info(`Victory: Humanity has survived ${this.maxYears} years. 🎉`);
+        if (!this.environment.isGlobalCollapse && this.environment.year >= this.steps) {
+            resultsLogger.info(`Victory: Humanity has survived ${this.steps} years. 🎉`);
         } else {
             resultsLogger.info("Loss: Humanity has failed to survive 100 years. 💀");
         }
     
-        return this.globalState;
+        return this.environment;
     }
 }

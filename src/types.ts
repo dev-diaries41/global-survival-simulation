@@ -122,13 +122,21 @@ export interface Resources {
 export type Choice = "defect" | "cooperate";
 
 // Represents the global state of the game
-export interface GlobalState {
+export interface Environment extends Omit<EnvironmentOptions, 'steps' | "onStepOutcome"> {
     year: number; // round
-    totalPopulation: number; 
-    totalResources: Resources;
-    nations: Nation[]; 
     isGlobalCollapse: boolean;
 }
+
+export interface EnvironmentOptions {
+    resourceDepletionRate: Resources
+    steps: number;
+    contributionFactor: number;
+    defectGainFactor: number;
+    globalPopulation: number;
+    globalResources: Resources,
+    onStepOutcome?: (outcome: Outcome) => void;
+  }
+
 
 
 export type NationCategory = "low" | "medium" | "high";
@@ -144,17 +152,13 @@ export interface Nation {
     state: NationState;
 }
 
-interface NationSummary extends Pick<Nation, "name" | "population" | "state"> {
-    choice: Choice;
-}
-
 export interface Outcome {
     year: number;
     cooperations: number;
     defections: number;
     globalResources: Resources;
     globalPopulation: number;
-    nations: NationSummary[];
+    activeNations: number;
 }
 
 
@@ -163,19 +167,12 @@ export interface NationChanges extends Resources {
     state: string;
 }
 
-export interface SimulationOptions {
-    resourceDepletionRate?: Resources
-    maxYears?: number;
-    contributionFactor?: number;
-    defectGainFactor?: number;
-    onYearOutcome?: (outcome: Outcome) => void;
-  }
 
   export  interface DecisionResult  {
     nation: Nation;
     choice: string;
-    globalChanges: Resources;
-    nationChanges: Resources & {
+    environmentChanges: Resources;
+    entityChanges: Resources & {
         population: number;
         state: string;
     };
