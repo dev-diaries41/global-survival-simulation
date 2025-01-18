@@ -2,7 +2,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import { generateJSON } from "../utils/openai";
 import { z } from "zod";
 import { logger, resultsLogger } from "../logger";
-import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, Resources, SimultionOptions, Outcome } from "../types";
+import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, Resources, SimultionOptions, Outcome, DecisionOptions } from "../types";
 import { Simulation } from "../base";
 
 export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, Outcome> {
@@ -16,6 +16,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
             globalPopulation: 8_000_000_000,
             globalResources: { food: 1_000, energy: 1_000, water: 1_000 },
         };
+        
     
         const defaultSimulationOptions: SimultionOptions = {
             steps: 10,
@@ -60,10 +61,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         return entities;
     }
 
-    protected getStateChanges(
-        nation: Nation,
-        choice: Choice,
-    ) {
+    protected getStateChanges(nation: Nation, choice: Choice):{entityChanges: NationChanges, environmentChanges: Resources} {
         const nationPopulationFactor = nation.population / this.environment.globalPopulation;
         const nationResourcesDepleted = nation.resources.food <= 0 || nation.resources.energy <= 0 || nation.resources.water <= 0;
         const nationPopulationChange = nationResourcesDepleted? -Math.floor(nation.population * 0.1): Math.floor(nation.population * 0.01) ;
@@ -120,7 +118,10 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
     }
 
     
-    protected async decide<Choice>(nation: Nation): Promise<Choice> {
+    protected async decide<Choice>(nation: Nation, decisionOptions?: DecisionOptions): Promise<Choice> {
+        const defaultDecisionOptions = {isSimulated: true};
+        const {isSimulated} = {...defaultDecisionOptions, ...decisionOptions} 
+
         const systemPrompt = `
         You are an AI simulation of a nation leader, tasked with making decisions to ensure the survival of your nation while considering the survival of humanity at large.
         Your primary objective is to make decisions that balance short-term survival with long-term sustainability. 
@@ -162,15 +163,22 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         Make your choice ("cooperate" or "defect") and concisely explain your reasoning in 1 sentence.
         `;
         
-        const res = await generateJSON(prompt, {
+        const simGenerateJSON = async(duration: number)=> {
+            await new Promise<void>(resolve => setTimeout(resolve, duration))
+            return {choice: Math.random() < 0.5? "defect" : "cooperate"};
+        }
+        
+        const res = isSimulated? await simGenerateJSON(3000) as {choice: Choice}:(
+            await generateJSON(prompt, {
             systemPrompt,
             responseFormat: zodResponseFormat(z.object({
                 choice: z.string(),
                 reasoning: z.string(),
             }), "choice"),
-        }) as unknown as { choice: Choice; reasoning: string } | null;
+        })  as { choice: Choice; } | null 
+    )
     
-        if (!res || !res?.choice || !res?.reasoning) {
+        if (!res || !res?.choice) {
             logger.error(`Invalid AI Response for nation ${nation.name} in year ${this.environment.year}`);
             throw new Error("Invalid AI Response");
         }
@@ -189,7 +197,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         return globalResourcesDepleted || extinct || allNationsCollapsed;
     }
 
-    protected updateEntity(nation: Nation, entityChanges: NationChanges) {
+    protected updateEntity(nation: Nation, entityChanges: NationChanges): void {
         if (nation.state !== entityChanges.state) {
             resultsLogger.info("state_transition", {
                 nation: nation.name,
@@ -211,7 +219,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         }
     }   
 
-    protected updateEnvironment(results: (DecisionResult | null)[]) {
+    protected updateEnvironment(results: (DecisionResult | null)[]): Outcome {
         let cooperations = 0;
         let defections = 0;
         const nationChoices: { [nationName: string]: Choice } = {};

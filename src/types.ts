@@ -134,7 +134,9 @@ export interface SurvivalEnvironment {
 }
 
 export interface SimultionOptions {
-    steps: number, 
+    steps: number,
+    type?: "sim" | "llm"
+    syntheticData?: SyntheticDataOptions;
     onStepComplete?: (outcome: Record<string, any>) => void,
     logger?: Logger
 }
@@ -177,3 +179,14 @@ export interface NationChanges extends Resources {
         state: string;
     };
 }
+
+export interface DecisionOptions {
+    isSimulated: boolean
+}
+
+export interface SyntheticDataOptions  {
+    ignoreKeys?: string[]; // Keys to ignore during simulation
+    limits?: Record<string, { min: number; max: number }>; // Optional limits for specific keys
+    sampleSize?: number; // Number of simulated data samples to generate
+  };
+  

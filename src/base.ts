@@ -1,7 +1,8 @@
 import { Logger } from "winston";
-import { SimultionOptions } from "./types";
+import { DecisionOptions, SyntheticDataOptions, SimultionOptions } from "./types";
+import { DataSimulator } from "./data";
 
-export abstract class Simulation<Entity, Environment, Outcome extends Record<string, any>> {
+export abstract class Simulation<Entity extends Record<string, any>, Environment extends Record<string, any>, Outcome extends Record<string, any>> {
     protected entities: Entity[];
     protected environment: Environment;
     protected steps: number;
@@ -17,21 +18,20 @@ export abstract class Simulation<Entity, Environment, Outcome extends Record<str
         this.onStepComplete = onStepComplete;
     }
 
-    // Abstract method to decide an action for each entity in each step using LLMs.
-    protected abstract decide<T extends string>(entity: Entity): Promise<T>;
+    // Decide an action for each entity in each step using LLMs.
+    protected abstract decide<T extends string = string>(entity: Entity, decisionOptions?: DecisionOptions): Promise<T>;
 
     // Get state changes based on the decision by an entity.
     protected abstract getStateChanges(entity: Entity, decision: string): { entityChanges: Record<string, any>; environmentChanges: Record<string, any> };
 
-    // Abstract method to update an entity after a decision.
+    // Update an entity after a decision.
     protected abstract updateEntity(entity: Entity, entityChanges: Record<string, any>): void;
 
-    // Abstract method to update the environment after the step.
+    // Update the environment after the step.
     protected abstract updateEnvironment(results: (Record<string, any>|null)[]): Outcome;
 
     protected  abstract isSimulationOver(): boolean;
 
-    // Run the simulation for the defined steps.
     abstract  run (): Promise<Environment>;
-        
+
 }
