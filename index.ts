@@ -1,4 +1,4 @@
-import { SurvivalSimulation, Environment, saveFile  } from "./src";
+import { SurvivalSimulation, saveFile  } from "./src";
 
 
 (async () => {

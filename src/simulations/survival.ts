@@ -1,41 +1,31 @@
 import { zodResponseFormat } from "openai/helpers/zod";
-import { generateJSON } from "./utils/openai";
+import { generateJSON } from "../utils/openai";
 import { z } from "zod";
-import { logger, resultsLogger } from "./logger";
-import { Choice, DecisionResult, Environment, Nation, NationChanges, Resources, EnvironmentOptions, Outcome } from "./types";
+import { logger, resultsLogger } from "../logger";
+import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, Resources, SimultionOptions, Outcome } from "../types";
+import { Simulation } from "../base";
 
-export class SurvivalSimulation extends SimulationEngine<Nation, Environment, Outcome> {
-    constructor(entities: Nation[], options: Partial<EnvironmentOptions> = {}) {
-        const defaultOptions: EnvironmentOptions = {
+export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, Outcome> {
+    constructor(entities: Nation[], environmentOptions: Partial<SurvivalEnvironment> = {}, simulationOpts: Partial<SimultionOptions> = {}) {
+        const defaultEnvironment: SurvivalEnvironment = {
+            year: 0,
+            isGlobalCollapse: false,
             resourceDepletionRate: { food: 20, energy: 15, water: 10 },
-            steps: 10,
             contributionFactor: 0.05,
             defectGainFactor: 0.1,
             globalPopulation: 8_000_000_000,
             globalResources: { food: 1_000, energy: 1_000, water: 1_000 },
         };
-
-        const {
-            resourceDepletionRate,
-            steps,
-            contributionFactor,
-            defectGainFactor,
-            globalPopulation,
-            globalResources,
-            onStepOutcome,
-        } = Object.assign(defaultOptions, options);
-
-        super(entities, {
-            year: 0,
-            resourceDepletionRate,
-            contributionFactor,
-            defectGainFactor,
-            globalPopulation,
-            globalResources,
-            isGlobalCollapse: false
-        }, steps, onStepOutcome);
+    
+        const defaultSimulationOptions: SimultionOptions = {
+            steps: 10,
+        };
+    
+        const environment = { ...defaultEnvironment, ...environmentOptions };
+        const simulationOptions = { ...defaultSimulationOptions, ...simulationOpts };
+        super(entities, environment, simulationOptions);
     }
-
+    
 
     static generateNations(n: number, baseResources: number = 100, basePopulation: number = 1_000_000_000): Nation[] {
         const totalNations = n; 
@@ -70,7 +60,7 @@ export class SurvivalSimulation extends SimulationEngine<Nation, Environment, Ou
         return entities;
     }
 
-    protected calcStateChanges(
+    protected getStateChanges(
         nation: Nation,
         choice: Choice,
     ) {
@@ -260,7 +250,7 @@ export class SurvivalSimulation extends SimulationEngine<Nation, Environment, Ou
         return outcome;
     }
     
-    public async run(): Promise<Environment> {
+    public async run(): Promise<SurvivalEnvironment> {
         for (let year = 1; year <= this.steps; year++) {
             resultsLogger.info(`Year ${year} begins`);
             this.environment.year = year;
@@ -272,7 +262,7 @@ export class SurvivalSimulation extends SimulationEngine<Nation, Environment, Ou
                     try {
                         const choice = await this.decide<Choice>(nation);
                         resultsLogger.info("choice", { nation: nation.name, choice });
-                        const { environmentChanges, entityChanges } = this.calcStateChanges(nation, choice);
+                        const { environmentChanges, entityChanges } = this.getStateChanges(nation, choice);
                         return { nation, choice, environmentChanges, entityChanges };
                     } catch (error: any) {
                         resultsLogger.error("decision_failure", {
@@ -282,7 +272,7 @@ export class SurvivalSimulation extends SimulationEngine<Nation, Environment, Ou
                         });
             
                         const defaultChoice = nation.state === "struggling" ? "defect" : "cooperate";
-                        const { environmentChanges, entityChanges } = this.calcStateChanges(nation, defaultChoice);
+                        const { environmentChanges, entityChanges } = this.getStateChanges(nation, defaultChoice);
                         resultsLogger.warn("default_decision_applied", {
                             nation: nation.name,
                             year: this.environment.year,
@@ -302,7 +292,7 @@ export class SurvivalSimulation extends SimulationEngine<Nation, Environment, Ou
             }
 
             const outcome = this.updateEnvironment(results);
-            this.onStepOutcome?.(outcome);
+            this.onStepComplete?.(outcome);
 
             if(this.isSimulationOver()) break;
         }

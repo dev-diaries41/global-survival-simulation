@@ -1,6 +1,7 @@
 import { ResponseFormatJSONSchema } from "openai/resources";
 import { ChatCompletionCreateParamsBase, ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { WebhookEventType } from "replicate";
+import { Logger } from "winston";
 
 
 export type ReplicateModel = `${string}/${string}` | `${string}/${string}:${string}`;
@@ -122,22 +123,21 @@ export interface Resources {
 export type Choice = "defect" | "cooperate";
 
 // Represents the global state of the game
-export interface Environment extends Omit<EnvironmentOptions, 'steps' | "onStepOutcome"> {
-    year: number; // round
+export interface SurvivalEnvironment {
+    year: number;
     isGlobalCollapse: boolean;
-}
-
-export interface EnvironmentOptions {
     resourceDepletionRate: Resources
-    steps: number;
     contributionFactor: number;
     defectGainFactor: number;
     globalPopulation: number;
     globalResources: Resources,
-    onStepOutcome?: (outcome: Outcome) => void;
-  }
+}
 
-
+export interface SimultionOptions {
+    steps: number, 
+    onStepComplete?: (outcome: Record<string, any>) => void,
+    logger?: Logger
+}
 
 export type NationCategory = "low" | "medium" | "high";
 
