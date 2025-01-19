@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
-import { ReplicateConfig, ImageGenOpts, ReplicateModel, ReplicateRunParams, TranscribeOpts, UpscaleOptions, ReplicateTextOpts } from './types';
+import { ReplicateConfig, ImageGenOpts, ReplicateModel, ReplicateRunParams, TranscribeOpts, UpscaleOptions, ReplicateTextOpts } from '../types';
 import Replicate, { ServerSentEvent } from 'replicate';
 
 export const defaultPromptTemplate = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are a helpful assistant<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n";

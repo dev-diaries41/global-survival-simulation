@@ -114,6 +114,19 @@ export interface GenerateJSONParams extends  OpenaiChatParams{
     opts?: Omit<Partial<ChatCompletionCreateParamsBase>, 'stream'>;
 }
 
+export interface SimultionOptions {
+    steps: number;
+    type: SimulationType;
+    onStepComplete: (eventData: Record<string, any>) => void;
+    onActive: (eventData: {entity: Record<string,any>, step: number}) => void;
+    onFailure: (eventData: Record<string, any>) => void;
+    onSuccess: (eventData: Record<string, any>) => void;
+  }
+  
+export type SimulationType = "sim" | "llm";
+export type SimulationEvent = "step-complete" | "complete" | "failed" | "success";
+
+
 export interface Resources {
     food: number;
     energy: number;
@@ -122,7 +135,7 @@ export interface Resources {
 
 export type Choice = "defect" | "cooperate";
 
-// Represents the global state of the game
+
 export interface SurvivalEnvironment {
     year: number;
     isGlobalCollapse: boolean;
@@ -133,14 +146,7 @@ export interface SurvivalEnvironment {
     globalResources: Resources,
 }
 
-export interface SimultionOptions {
-    steps: number,
-    type?: "sim" | "llm"
-    syntheticData?: SyntheticDataOptions;
-    onStepComplete?: (outcome: Record<string, any>) => void,
-    logger?: Logger
-}
-
+  
 export type NationCategory = "low" | "medium" | "high";
 
 export type NationState = "normal" | "struggling";
@@ -154,7 +160,7 @@ export interface Nation {
     state: NationState;
 }
 
-export interface Outcome {
+export interface StepResult {
     year: number;
     cooperations: number;
     defections: number;
@@ -178,10 +184,6 @@ export interface NationChanges extends Resources {
         population: number;
         state: string;
     };
-}
-
-export interface DecisionOptions {
-    isSimulated: boolean
 }
 
 export interface SyntheticDataOptions  {
