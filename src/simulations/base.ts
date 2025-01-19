@@ -2,7 +2,7 @@ import { LLMClient } from "../llms/base";
 import { OpenAIClient } from "../llms/openai";
 import { SimulationType, SimulationOptions, DecisionResult, StepOutcome } from "../types";
 
-export abstract class Simulation<Entity extends Record<string, any>, Environment extends Record<string, any>, SurvivalStats extends Record<string, any>> {
+export abstract class Simulation<Entity extends Record<string, any>, Environment extends Record<string, any>, StepResult extends Record<string, any>> {
     protected entities: Entity[];
     protected environment: Environment;
     protected llmClient?: LLMClient;
@@ -11,7 +11,7 @@ export abstract class Simulation<Entity extends Record<string, any>, Environment
     readonly type: SimulationType;
 
     protected eventHandlers: {
-        onStepComplete?: (eventData: StepOutcome) => void;
+        onStepComplete?: (eventData: StepOutcome<StepResult>) => void;
     };
 
     protected readonly defaultSimulationOptions: Pick<SimulationOptions, "type" | "steps"> = {

@@ -1,8 +1,8 @@
-import { SurvivalSimulation} from ".";
+// import { SurvivalSimulation} from ".";
 
 
-(async () => {
-    const sim = new SurvivalSimulation()
-    const result = await sim.run();
-    console.log(result)
-})();
+// (async () => {
+//     const sim = new SurvivalSimulation()
+//     const result = await sim.run();
+//     console.log(result)
+// })();

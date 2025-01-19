@@ -113,9 +113,8 @@ export interface GenerateJSONParams extends  OpenaiChatParams{
     opts?: Omit<Partial<ChatCompletionCreateParamsBase>, 'stream'>;
 }
 
-
-export interface StateChange<T extends Record<string, any>> {
-    changes: T; // The actual changes to the state of the entity or environment
+export interface StepOutcome<T extends Record<string,any> = Record<string,any>>{
+    outcome: T
 }
 
 export interface SimulationOptions {
@@ -123,10 +122,20 @@ export interface SimulationOptions {
     type: SimulationType;
     onStepComplete: (SurvivalStats: Record<string, any>) => void;
     openaiApiKey?: string;
-  }
+}
+
+export interface DecisionResult<
+  Entity extends Record<string, any> = Record<string, any>,
+  EnvironmentChanges extends Record<string, any> = Record<string, any>,
+  EntityChanges extends Record<string, any> = Record<string, any>
+> {
+  entity: Entity;
+  decision: string;
+  environmentChanges: EnvironmentChanges;
+  entityChanges: EntityChanges;
+}
   
 export type SimulationType = "sim" | "llm";
-
 
 export interface Resources {
     food: number;
@@ -161,10 +170,6 @@ export interface Nation {
     state: NationState;
 }
 
-export interface StepOutcome<T extends Record<string,any> = Record<string,any>>{
-    outcome: T
-}
-
 export interface SurvivalStats {
     year: number;
     cooperations: number;
@@ -174,22 +179,9 @@ export interface SurvivalStats {
     activeNations: number;
 }
 
-
 export interface NationChanges extends Resources {
     population: number;
     state: string;
-}
-
-
-export interface DecisionResult<
-  Entity extends Record<string, any> = Record<string, any>,
-  EnvironmentChanges extends Record<string, any> = Record<string, any>,
-  EntityChanges extends Record<string, any> = Record<string, any>
-> {
-  entity: Entity;
-  decision: string;
-  environmentChanges: EnvironmentChanges;
-  entityChanges: EntityChanges;
 }
 
 
