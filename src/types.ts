@@ -1,7 +1,6 @@
 import { ResponseFormatJSONSchema } from "openai/resources";
 import { ChatCompletionCreateParamsBase, ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { WebhookEventType } from "replicate";
-import { Logger } from "winston";
 
 
 export type ReplicateModel = `${string}/${string}` | `${string}/${string}:${string}`;
@@ -118,6 +117,7 @@ export interface SimultionOptions {
     steps: number;
     type: SimulationType;
     onStepComplete: (StepResult: Record<string, any>) => void;
+    openaiApiKey?: string;
   }
   
 export type SimulationType = "sim" | "llm";

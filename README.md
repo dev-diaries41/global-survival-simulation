@@ -1,24 +1,23 @@
-# Global Survival Simulation
+# Simiverse: Simulation Framework
 
 ---
 
 ## Overview
 
-The **Global Survival Simulation** is a resource-management game modeled to simulate global and national decision-making. It demonstrates the delicate balance between cooperation and defection within a group of entities striving to ensure their survival, as well as humanity's survival as a whole. The simulation explores decision-making dynamics in the face of finite resources and the risk of global collapse.
+**Simiverse** is a versatile simulation framework designed to be a universal plugin for applications, providing the necessary base simulation class and a variety of simulation modules. It allows for easy integration into different systems and can be utilized across various domains such as training data generation for machine learning models, evaluating AI alignment, simulating complex decision-making processes, and more. The framework provides tools for managing entities, environments, and decision-making within simulations, with the flexibility to use AI-driven decision models through an extensible client architecture.
+
+Simiverse consists of a base class, `Simulation`, which supports both traditional and AI-assisted decision-making workflows. Additionally, the framework includes specialized modules, like the `LLMClient` and `OpenAIClient`, to support AI interactions for more advanced simulations. This repo is integrated with a web platform designed to run simulations efficiently and interactively.
 
 ---
 
 ## Table of Contents
 
-1. [Prerequisites](#prerequisites)  
-2. [Features](#features)  
-3. [Game Mechanics](#game-mechanics)  
-   - [Nation Types](#nation-types)  
-   - [Global Resources](#global-resources)  
-   - [Decision-Making](#decision-making)  
-4. [Simulation Workflow](#simulation-workflow)  
-5. [Setup Instructions](#setup-instructions)  
-6. [How to Run](#how-to-run)  
+1. [Prerequisites](#prerequisites)
+2. [Features](#features)
+3. [Simulations](#simulations)
+4. [Setup Instructions](#setup-instructions)
+5. [How to Run](#how-to-run)
+
 ---
 
 ## Prerequisites
@@ -31,60 +30,48 @@ The **Global Survival Simulation** is a resource-management game modeled to simu
 
 ## Features
 
-- **Dynamic Nation Generation**: Nations are dynamically generated with unique attributes.  
-- **Resource Management**: Nations manage food, energy, and water resources.  
-- **Decision-Making**: Nations make decisions to cooperate or defect based on their state and global context.  
-- **Global Collapse Scenarios**: Tracks global collapse due to resource depletion, population decline, or the collapse of all entities.  
-- **AI-Assisted Decision-Making**: Each nation's leader is simulated as an AI making decisions based on contextual prompts.
+- **Universal Simulation Framework**: Build your simulations using the base `Simulation` class, with support for integrating custom modules.
+- **Dynamic Entity Generation**: Simulate diverse entities with customizable attributes.
+- **AI-Assisted Decision-Making**: Easily integrate AI models for decision-making processes, using the `LLMClient` and `OpenAIClient` modules.
+- **Custom Simulation Modules**: Extend the framework by adding specific modules to fit various use cases such as training, evaluation, and AI alignment.
+- **Web Platform Integration**: Seamlessly run and manage simulations on a web platform built for simulation execution and interaction.
 
 ---
 
-## Game Mechanics
+## Simulations
 
-### Nation Types
+### Survival Simulation
 
-Each nation has the following attributes:
-- **ID and Name**: Unique identifiers.  
-- **Resources**: Levels of food, energy, and water.  
-- **Population**: Total inhabitants.  
-- **Category**: Defines resource availability: `low`, `medium`, or `high`.  
-- **State**: `normal` or `struggling` based on resource availability.  
-- **Collapse Status**: Determines if the nation has collapsed.
+**Description**: The Survival Simulation models global and national decision-making in a resource-constrained world. It demonstrates the delicate balance between cooperation and defection, where nations must decide whether to collaborate or claim resources to survive. The simulation tracks global resource levels and the collapse of nations based on their decisions.
 
-### Global Resources
+- **Simulation Type**: Resource management, decision-making, global collapse.
+- **Primary Focus**: Cooperation vs. defection dynamics among nations.
+- **Features**:  
+  - Dynamic nation generation with unique resource states.
+  - Resource depletion and its impact on global stability.
+  - AI-assisted decision-making for nations' actions.
+  
+**Example Usage**:
 
-- **Food, Energy, and Water**: Shared resources available to all entities.  
-- **Depletion Rates**: Fixed annual reductions to global resources.
+```typescript
+import { SurvivalSimulation } from "simiverse/simulations";
+import { OpenAIClient } from "../llms/openai";
 
-### Decision-Making
-
-Each nation evaluates whether to:  
-1. **Cooperate**: Contribute to the global resource pool, reducing depletion rates but at the cost of its own resources.  
-2. **Defect**: Claim additional resources from the global pool for short-term survival, increasing the depletion rate.
-
----
-
-## Simulation Workflow
-
-1. **Initialize Simulation**: Generate entities and assign starting resources.  
-2. **Annual Decision Cycle**:  
-   - Each nation decides to cooperate or defect based on its resources and global state.  
-   - Resources are adjusted based on decisions.  
-   - Nations with depleted resources or populations collapse.  
-3. **Apply Global Depletion**: Reduce global resources based on fixed depletion rates.  
-4. **Check for Collapse Conditions**:  
-   - Global collapse occurs if all entities collapse or if global resources are depleted.  
-   - Victory is declared if humanity survives 50 years.  
-5. **Save Results**: Simulation results are saved to a JSON file.
-
----
+const simulation = new SurvivalSimulation(entities, environment, {
+  steps: 10,
+  type: "sim",
+  openaiApiKey: "your-api-key",
+  onStepComplete: (eventData) => console.log(eventData),
+});
+simulation.run();
+```
 
 ## Setup Instructions
 
 1. **Clone Repository**:
    ```bash
-   git clone https://github.com/dev-diaries41/global-survival-simulation.git
-   cd global-survival-simulation
+   git clone https://github.com/dev-diaries41/simiverse.git
+   cd simiverse
    ```
 
 2. **Install Dependencies**:
@@ -107,9 +94,4 @@ Each nation evaluates whether to:
    ```bash
    npm start
    ```
-
-2. **View Results**:
-   - Simulation results are saved in a file named `sim_result_<timestamp>.json`.  
-   - Full logs are stored using the winston logger in the `logs/` directory.
-
 ---

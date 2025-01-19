@@ -1,4 +1,5 @@
 import { LLMClient } from "../llms/base";
+import { OpenAIClient } from "../llms/openai";
 import { SimulationType, SimultionOptions } from "../types";
 
 export abstract class Simulation<Entity extends Record<string, any>, Environment extends Record<string, any>, StepResult extends Record<string, any>> {
@@ -26,9 +27,15 @@ export abstract class Simulation<Entity extends Record<string, any>, Environment
         this.environment = environment;
 
         // Use default options to fill in missing values
-        const { steps, type, ...eventHandlers } = {
+        const { steps, type, openaiApiKey,  ...eventHandlers } = {
             ...this.defaultSimulationOptions,
             ...simulationOptions
+        };
+
+        if (openaiApiKey) {
+            this.llmClient = new OpenAIClient(openaiApiKey);
+        } else if (type === "llm") {
+            throw new Error("OpenAI API key is required to initialize LLM client.");
         };
 
         this.steps = steps;
