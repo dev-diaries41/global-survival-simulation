@@ -1,6 +1,6 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, Resources, SimultionOptions, StepResult } from "../types";
+import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, Resources, SimulationOptions, StepResult } from "../types";
 import { Simulation } from "./base";
 import { generateSimulatedData } from "../data";
 
@@ -15,7 +15,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         globalResources: { food: 1_000, energy: 1_000, water: 1_000 },
     };
 
-    constructor(entities: Nation[] = [], environmentOptions: Partial<SurvivalEnvironment> = {}, simulationOpts: Partial<SimultionOptions> = {}) {
+    constructor(entities: Nation[] = [], environmentOptions: Partial<SurvivalEnvironment> = {}, simulationOpts: Partial<SimulationOptions> = {}) {
         const simulatedEntities = entities.length > 0? entities : Array.from(generateSimulatedData(SurvivalSimulation.generateNations(1)[0]));
         const environment = { ...SurvivalSimulation.defaultEnvironment, ...environmentOptions };
         const simulationOptions = { ...simulationOpts };

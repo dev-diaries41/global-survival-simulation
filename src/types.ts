@@ -113,7 +113,7 @@ export interface GenerateJSONParams extends  OpenaiChatParams{
     opts?: Omit<Partial<ChatCompletionCreateParamsBase>, 'stream'>;
 }
 
-export interface SimultionOptions {
+export interface SimulationOptions {
     steps: number;
     type: SimulationType;
     onStepComplete: (StepResult: Record<string, any>) => void;
