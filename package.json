@@ -1,7 +1,7 @@
 {
   "name": "simiverse",
   "description": "Simiverse is a versatile simulation framework that provides a base Simulation class and modular components for creating, managing, and running simulations with or without AI assistance, applicable to a wide range of use cases such as modeling complex systems and decision-making processes.",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
