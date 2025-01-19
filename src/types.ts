@@ -117,14 +117,10 @@ export interface GenerateJSONParams extends  OpenaiChatParams{
 export interface SimultionOptions {
     steps: number;
     type: SimulationType;
-    onStepComplete: (eventData: Record<string, any>) => void;
-    onActive: (eventData: {entity: Record<string,any>, step: number}) => void;
-    onFailure: (eventData: Record<string, any>) => void;
-    onSuccess: (eventData: Record<string, any>) => void;
+    onStepComplete: (StepResult: Record<string, any>) => void;
   }
   
 export type SimulationType = "sim" | "llm";
-export type SimulationEvent = "step-complete" | "complete" | "failed" | "success";
 
 
 export interface Resources {

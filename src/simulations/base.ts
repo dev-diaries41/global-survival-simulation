@@ -1,17 +1,16 @@
 import { LLMClient } from "../llms/base";
-import {SimulationType, SimultionOptions } from "../types";
+import { SimulationType, SimultionOptions } from "../types";
 
 export abstract class Simulation<Entity extends Record<string, any>, Environment extends Record<string, any>, StepResult extends Record<string, any>> {
     protected entities: Entity[];
     protected environment: Environment;
     protected llmClient?: LLMClient;
+
     readonly steps: number;
     readonly type: SimulationType;
 
-
     protected eventHandlers: {
         onStepComplete?: (eventData: StepResult) => void;
-        onComplete?: (environment: Environment) => void;
     };
 
     protected readonly defaultSimulationOptions: Pick<SimultionOptions, "type" | "steps"> = {
@@ -19,14 +18,17 @@ export abstract class Simulation<Entity extends Record<string, any>, Environment
         type: "sim",
     };
 
+    private paused: boolean = false; 
+    private stopped: boolean = false;
+
     constructor(entities: Entity[], environment: Environment, simulationOptions: Partial<SimultionOptions>) {
         this.entities = entities;
         this.environment = environment;
 
         // Use default options to fill in missing values
-        const { steps, type, ...eventHandlers } = { 
-            ...this.defaultSimulationOptions, 
-            ...simulationOptions 
+        const { steps, type, ...eventHandlers } = {
+            ...this.defaultSimulationOptions,
+            ...simulationOptions
         };
 
         this.steps = steps;
@@ -34,19 +36,43 @@ export abstract class Simulation<Entity extends Record<string, any>, Environment
         this.eventHandlers = eventHandlers;
     }
 
-    // Decide an action for each entity in each step using LLMs.
+    public pause(): void {
+        this.paused = true;
+        console.info("Simulation paused");
+    }
+
+    public resume(): void {
+        this.paused = false;
+        console.info("Simulation resumed");
+    }
+
+    protected async checkPause(): Promise<void> {
+        while (this.paused) {
+            await new Promise((resolve) => setTimeout(resolve, 100)); // Wait until resumed
+        }
+    }
+
+    // Method to stop the simulation
+    public stop(): void {
+        this.stopped = true;
+        console.info("Simulation stopped");
+    }
+
+    // Method to check if the simulation is stopped
+    protected isStopped(): boolean {
+        return this.stopped;
+    }
+
     protected abstract decide<T extends string = string>(entity: Entity, prompt?: string, systemPrompt?: string): Promise<T>;
 
-    // Get state changes based on the decision by an entity.
     protected abstract getStateChanges(entity: Entity, decision: string): { entityChanges: Record<string, any>; environmentChanges: Record<string, any> };
 
-    // Update an entity after a decision.
     protected abstract updateEntity(entity: Entity, entityChanges: Record<string, any>): void;
 
-    // Update the environment after the step.
     protected abstract updateEnvironment(results: (Record<string, any> | null)[]): StepResult;
 
     protected abstract isSimulationCompleted(): boolean;
 
+    // Abstract method to run the simulation
     abstract run(): Promise<Environment>;
 }

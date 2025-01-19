@@ -240,7 +240,6 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
                             year: this.environment.year,
                             defaultChoice,
                         });
-    
                         return { nation, choice: defaultChoice, environmentChanges, entityChanges };
                     }
                 })
@@ -259,9 +258,6 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
     
             if (this.isSimulationCompleted()) break;
         }
-    
-        this.eventHandlers.onComplete?.(this.environment);
-        
         return this.environment;
     }
     
