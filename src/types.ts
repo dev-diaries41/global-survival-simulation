@@ -117,12 +117,18 @@ export interface StepOutcome<T extends Record<string,any> = Record<string,any>>{
     outcome: T
 }
 
-export interface SimulationOptions {
+export interface SimulationConfig {
     steps: number;
     type: SimulationType;
-    onStepComplete: (SurvivalStats: Record<string, any>) => void;
     openaiApiKey?: string;
+    onStepComplete: (stepOutcome: Record<string, any>) => void;
 }
+
+export interface SyntheticDataConfig  {
+    ignoreKeys?: string[];
+    limits?: Record<string, { min: number; max: number }>;
+    sampleSize?: number;
+};
 
 export interface DecisionResult<
   Entity extends Record<string, any> = Record<string, any>,
@@ -186,9 +192,5 @@ export interface NationChanges extends Resources {
 
 
 
-export interface SyntheticDataOptions  {
-    ignoreKeys?: string[]; // Keys to ignore during simulation
-    limits?: Record<string, { min: number; max: number }>; // Optional limits for specific keys
-    sampleSize?: number; // Number of simulated data samples to generate
-  };
+
   

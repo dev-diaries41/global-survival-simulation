@@ -1,11 +1,10 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, Resources, SimulationOptions, SurvivalStats, StepOutcome } from "../types";
+import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, Resources, SimulationConfig, SurvivalStats, StepOutcome } from "../types";
 import { Simulation } from "./base";
-import { generateSimulatedData } from "../data";
 
 export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, SurvivalStats> {
-    private static readonly defaultEnvironment: SurvivalEnvironment = {
+    public static readonly defaultEnvironment: SurvivalEnvironment = {
         year: 0,
         isGlobalCollapse: false,
         resourceDepletionRate: { food: 20, energy: 15, water: 10 },
@@ -15,12 +14,11 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         globalResources: { food: 1_000, energy: 1_000, water: 1_000 },
     };
 
-    constructor(entities: Nation[] = [], environmentOptions: Partial<SurvivalEnvironment> = {}, simulationOpts: Partial<SimulationOptions> = {}) {
-        const simulatedEntities = entities.length > 0? entities : Array.from(generateSimulatedData(SurvivalSimulation.generateNations(1)[0]));
-        const environment = { ...SurvivalSimulation.defaultEnvironment, ...environmentOptions };
-        const simulationOptions = { ...simulationOpts };
-        super(simulatedEntities, environment, simulationOptions);
-        }
+    constructor(entities: Nation[], environmentConfig: Partial<SurvivalEnvironment> = {}, simulationConfig: Partial<SimulationConfig> = {}) {
+        const simulationEntities = entities.length === 0? SurvivalSimulation.generateNations(5) : entities;
+        const environment = { ...SurvivalSimulation.defaultEnvironment, ...environmentConfig };
+        super(simulationEntities, environment, simulationConfig);
+    }
     
 
     private generateSimulationPrompt(nation: Nation) { return `
@@ -165,8 +163,8 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
     
         // Validate the response
         if (!res || !res.decision) {
-            console.error(`Invalid AI Response for nation ${nation.name} in year ${this.environment.year}`);
-            throw new Error("Invalid AI Response");
+            console.error(`Invalid decision for nation ${nation.name} in year ${this.environment.year}`);
+            throw new Error("Invalid decision");
         }
     
         return res.decision;

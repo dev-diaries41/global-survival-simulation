@@ -1,8 +1,10 @@
-// import { SurvivalSimulation} from ".";
+import { generateSimulatedData, SurvivalSimulation} from ".";
 
 
 // (async () => {
-//     const sim = new SurvivalSimulation()
+//     const sim = new SurvivalSimulation([], {}, {
+//         type: 'sim',  
+//     })
 //     const result = await sim.run();
 //     console.log(result)
 // })();

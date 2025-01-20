@@ -1,4 +1,4 @@
-type SyntheticDataOptions = {
+type SyntheticDataConfig = {
   ignoreKeys?: string[];
   limits?: Record<string, { min: number; max: number }>;
   sampleSize?: number;
@@ -24,7 +24,7 @@ const generateValue = (
 
 export const simulateSingle = <T extends Record<string, any>>(
   obj: T,
-  options: SyntheticDataOptions
+  options: SyntheticDataConfig
 ): T => {
   const { ignoreKeys = [], limits = {} } = options;
   const simulatedData = {} as T;
@@ -40,7 +40,7 @@ export const simulateSingle = <T extends Record<string, any>>(
   return simulatedData;
 };
 
-export const generateSimulatedData = <T extends Record<string, any>>(obj: T, options: SyntheticDataOptions = {}): IterableIterator<T> => {
+export const generateSimulatedData = <T extends Record<string, any>>(obj: T, options: SyntheticDataConfig = {}): IterableIterator<T> => {
   const { sampleSize = 1 } = options;
   function* generator() {
     for (let i = 0; i < sampleSize; i++) {
@@ -63,7 +63,7 @@ export const generateSimulatedData = <T extends Record<string, any>>(obj: T, opt
 //   population: 8000000000,
 // };
 
-// const options: SyntheticDataOptions = {
+// const options: SyntheticDataConfig = {
 //   ignoreKeys: ["isGlobalCollapse", "year"],
 //   limits: {
 //     food: { min: 50, max: 2000 },

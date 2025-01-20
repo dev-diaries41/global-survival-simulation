@@ -1,6 +1,6 @@
 import { LLMClient } from "../llms/base";
 import { OpenAIClient } from "../llms/openai";
-import { SimulationType, SimulationOptions, DecisionResult, StepOutcome } from "../types";
+import { SimulationType, SimulationConfig, DecisionResult, StepOutcome } from "../types";
 
 export abstract class Simulation<Entity extends Record<string, any>, Environment extends Record<string, any>, StepResult extends Record<string, any>> {
     protected entities: Entity[];
@@ -14,7 +14,7 @@ export abstract class Simulation<Entity extends Record<string, any>, Environment
         onStepComplete?: (eventData: StepOutcome<StepResult>) => void;
     };
 
-    protected readonly defaultSimulationOptions: Pick<SimulationOptions, "type" | "steps"> = {
+    protected readonly defaultSimulationConfig: Pick<SimulationConfig, "type" | "steps"> = {
         steps: 10,
         type: "sim",
     };
@@ -22,14 +22,14 @@ export abstract class Simulation<Entity extends Record<string, any>, Environment
     private paused: boolean = false;
     private stopped: boolean = false;
 
-    constructor(entities: Entity[], environment: Environment, simulationOptions: Partial<SimulationOptions>) {
+    constructor(entities: Entity[], environment: Environment, simulationConfig: Partial<SimulationConfig>) {
         this.entities = entities;
         this.environment = environment;
 
         // Use default options to fill in missing values
         const { steps, type, openaiApiKey, ...eventHandlers } = {
-            ...this.defaultSimulationOptions,
-            ...simulationOptions,
+            ...this.defaultSimulationConfig,
+            ...simulationConfig,
         };
 
         if (openaiApiKey) {
