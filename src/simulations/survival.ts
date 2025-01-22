@@ -174,12 +174,12 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
     protected isSimulationCompleted():boolean {
         const globalResourcesDepleted = this.environment.globalResources.food <= 0 || this.environment.globalResources.energy <= 0 || this.environment.globalResources.water <= 0;
         const extinct = this.environment.globalPopulation <= 0;
-        const allNationsCollapsed = this.entities.filter((nation) => !nation.isCollapsed).length === 0;
+        const maxStepsReached = this.environment.year >= this.steps;
 
-        if (globalResourcesDepleted || extinct || allNationsCollapsed) {
+        if (globalResourcesDepleted || extinct) {
             console.info("Global collapse has occurred 💀");
         }
-        return globalResourcesDepleted || extinct || allNationsCollapsed;
+        return  maxStepsReached || globalResourcesDepleted || extinct;
     }
 
     protected updateEntity(nation: Nation, entityChanges: NationChanges): void {
