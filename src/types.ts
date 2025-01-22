@@ -121,7 +121,7 @@ export interface SimulationConfig {
     steps: number;
     type: SimulationType;
     openaiApiKey?: string;
-    onStepComplete: (stepOutcome: Record<string, any>) => void;
+    onStepComplete?: (stepOutcome: StepOutcome) => void;
 }
 
 export interface SyntheticDataConfig  {

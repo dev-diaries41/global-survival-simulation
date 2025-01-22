@@ -11,7 +11,7 @@ export abstract class Simulation<Entity extends Record<string, any>, Environment
     readonly type: SimulationType;
 
     protected eventHandlers: {
-        onStepComplete?: (eventData: StepOutcome<StepResult>) => void;
+        onStepComplete?: (outcome: StepOutcome<StepResult>) => void;
     };
 
     protected readonly defaultSimulationConfig: Pick<SimulationConfig, "type" | "steps"> = {
