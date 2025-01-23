@@ -1,6 +1,6 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, Resources, SimulationConfig, SurvivalStats, StepOutcome } from "../types";
+import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, Resources, SimulationConfig, SurvivalStats, StepOutcome, NationState } from "../types";
 import { Simulation } from "./base";
 
 export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, SurvivalStats> {
@@ -53,36 +53,26 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
     }
 
     static generateNations(n: number, baseResources: number = 100, basePopulation: number = 1_000_000_000): Nation[] {
-        const totalNations = n; 
         const categories = ["low", "medium", "high"] as const;
         const resourceRatios = { low: 1, medium: 2, high: 4 }; 
-        const entities: Nation[] = [];
-        let idCounter = 0;
     
-        for (const category of categories) {
-            for (let i = 0; i < totalNations / categories.length; i++) {
-                const resources: Resources = {
-                    food: baseResources * resourceRatios[category],
-                    energy: baseResources * resourceRatios[category],
-                    water: baseResources * resourceRatios[category],
-                };
+        return Array.from({ length: n }, (_, index) => {
+            const category = categories[index % categories.length];
+            const resources = {
+                food: baseResources * resourceRatios[category],
+                energy: baseResources * resourceRatios[category],
+                water: baseResources * resourceRatios[category],
+            };
     
-                idCounter++
-    
-                const nation: Nation = {
-                    name: `Nation ${idCounter}`,
-                    resources,
-                    population: basePopulation,
-                    isCollapsed: false,
-                    category,
-                    state: "normal"
-                };
-    
-                entities.push(nation);
-            }
-        }
-    
-        return entities;
+            return {
+                name: `Nation ${index + 1}`,
+                resources,
+                population: basePopulation,
+                isCollapsed: false,
+                category,
+                state: "normal"
+            };
+        });
     }
 
     protected getStateChanges(nation: Nation, decision: Choice):{entityChanges: NationChanges, environmentChanges: Resources} {
