@@ -1,6 +1,6 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, Resources, SimulationConfig, SurvivalStats, StepOutcome, NationState, GlobalChanges } from "../types";
+import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, SimulationConfig, SurvivalStats, StepOutcome, GlobalChanges } from "../types";
 import { Simulation } from "./base";
 
 export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, SurvivalStats> {
@@ -77,9 +77,11 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
 
     protected getStateChanges(nation: Nation, decision: Choice):{entityChanges: NationChanges, environmentChanges: GlobalChanges} {
         const nationPopulationFactor = nation.population / this.environment.globalPopulation;
-        const nationResourcesDepleted = nation.resources.food <= 0 || nation.resources.energy <= 0 || nation.resources.water <= 0;
+        const nationResourcesDepleted = Object.values(nation.resources).some(resource => resource <= 0);
         const nationPopulationChange = nationResourcesDepleted? -Math.floor(nation.population * 0.1): Math.floor(nation.population * 0.01) ;
         const newState =  nationResourcesDepleted? "struggling" : "normal";
+        const globalResourcesDepleted = Object.values(this.environment.globalResources).some(resource => resource <= 0);
+        const globalPopulationChange = globalResourcesDepleted? nationPopulationChange + (-Math.floor(this.environment.globalPopulation * 0.1)) : nationPopulationChange;
 
         if (decision === "cooperate") {
             // Global resource contribution proportional to the nation's population
@@ -91,7 +93,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
                 food: -foodContribution,
                 energy: -energyContribution,
                 water: -waterContribution,
-                population: nationPopulationChange,
+                population: globalPopulationChange,
                 state: newState
             };
     
@@ -99,7 +101,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
                 food: foodContribution,
                 energy: energyContribution,
                 water: waterContribution,
-                population: nationPopulationChange
+                population: globalPopulationChange
             };
         
             return { entityChanges, environmentChanges };
@@ -128,7 +130,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         } else {
             return { 
                 entityChanges: { food: 0, energy: 0, water: 0, population: nationPopulationChange, state: newState }, 
-                environmentChanges: { food: 0, energy: 0, water: 0, population: nationPopulationChange } 
+                environmentChanges: { food: 0, energy: 0, water: 0, population: globalPopulationChange } 
             };
         }
     }
