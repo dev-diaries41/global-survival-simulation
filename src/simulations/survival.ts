@@ -75,66 +75,39 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         });
     }
 
-    protected getStateChanges(nation: Nation, decision: Choice):{entityChanges: NationChanges, environmentChanges: GlobalChanges} {
+    protected getStateChanges(nation: Nation, decision: Choice): { entityChanges: NationChanges; environmentChanges: GlobalChanges } {
         const nationPopulationFactor = nation.population / this.environment.globalPopulation;
         const nationResourcesDepleted = Object.values(nation.resources).some(resource => resource <= 0);
-        const nationPopulationChange = nationResourcesDepleted? -Math.floor(nation.population * 0.1): Math.floor(nation.population * 0.01) ;
-        const newState =  nationResourcesDepleted? "struggling" : "normal";
+        const nationPopulationChange = nationResourcesDepleted? -Math.floor(nation.population * 0.1) : Math.floor(nation.population * 0.01);
+        const newState = nationResourcesDepleted ? "struggling" : "normal";
         const globalResourcesDepleted = Object.values(this.environment.globalResources).some(resource => resource <= 0);
-        const globalPopulationChange = globalResourcesDepleted? nationPopulationChange + (-Math.floor(this.environment.globalPopulation * 0.1)) : nationPopulationChange;
-
-        if (decision === "cooperate") {
-            // Global resource contribution proportional to the nation's population
-            const foodContribution = Math.floor(this.environment.globalResources.food * this.environment.contributionFactor * nationPopulationFactor);
-            const energyContribution = Math.floor(this.environment.globalResources.energy * this.environment.contributionFactor * nationPopulationFactor);
-            const waterContribution = Math.floor(this.environment.globalResources.water * this.environment.contributionFactor * nationPopulationFactor);
+        const globalPopulationChange = globalResourcesDepleted? nationPopulationChange + -Math.floor(this.environment.globalPopulation * 0.1) : nationPopulationChange;
     
-            const entityChanges = {
-                food: -foodContribution,
-                energy: -energyContribution,
-                water: -waterContribution,
-                population: globalPopulationChange,
-                state: newState
-            };
+        const calculateResourceChanges = (factor: number) => ({
+            food: Math.floor(this.environment.globalResources.food * factor * nationPopulationFactor),
+            energy: Math.floor(this.environment.globalResources.energy * factor * nationPopulationFactor),
+            water: Math.floor(this.environment.globalResources.water * factor * nationPopulationFactor),
+        });
     
-            const environmentChanges = {
-                food: foodContribution,
-                energy: energyContribution,
-                water: waterContribution,
-                population: globalPopulationChange
-            };
-        
-            return { entityChanges, environmentChanges };
-        } else if (decision === "defect") {
-            // Resource gain proportional to the nation's population
-            const foodGain = Math.floor(this.environment.globalResources.food * this.environment.defectGainFactor * nationPopulationFactor);
-            const energyGain = Math.floor(this.environment.globalResources.energy * this.environment.defectGainFactor * nationPopulationFactor);
-            const waterGain = Math.floor(this.environment.globalResources.water * this.environment.defectGainFactor * nationPopulationFactor);
+        const { food, energy, water } = decision === "cooperate"? calculateResourceChanges(this.environment.contributionFactor) : calculateResourceChanges(this.environment.defectGainFactor);
     
-            const entityChanges = {
-                food: foodGain,
-                energy: energyGain,
-                water: waterGain,
-                population: nationPopulationChange,
-                state: newState
-            };
+        const entityChanges = {
+            food: decision === "cooperate" ? -food : food,
+            energy: decision === "cooperate" ? -energy : energy,
+            water: decision === "cooperate" ? -water : water,
+            population: nationPopulationChange,
+            state: newState,
+        };
     
-            const environmentChanges = {
-                food: -foodGain,
-                energy: -energyGain,
-                water: -waterGain,
-                population: nationPopulationChange
-            };
+        const environmentChanges = {
+            food: decision === "cooperate" ? food : -food,
+            energy: decision === "cooperate" ? energy : -energy,
+            water: decision === "cooperate" ? water : -water,
+            population: globalPopulationChange,
+        };
     
-            return { entityChanges, environmentChanges };
-        } else {
-            return { 
-                entityChanges: { food: 0, energy: 0, water: 0, population: nationPopulationChange, state: newState }, 
-                environmentChanges: { food: 0, energy: 0, water: 0, population: globalPopulationChange } 
-            };
-        }
+        return {entityChanges, environmentChanges};
     }
-
     
     protected async decide<Choice>(nation: Nation, prompt?: string, systemPrompt?: string): Promise<Choice> {        
         const simulateDecision = async (duration: number): Promise<{ decision: Choice }> => {
@@ -154,7 +127,6 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
                       ),
                   }) : await simulateDecision(3000);
     
-        // Validate the response
         if (!res || !res.decision) {
             console.error(`Invalid decision for nation ${nation.name} in year ${this.environment.year}`);
             throw new Error("Invalid decision");
