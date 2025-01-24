@@ -97,9 +97,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
     protected getStateChanges(nation: Nation, decision: Choice): { entityChanges: NationChanges } {
         const globalPopulation = this.calculateGlobalPopulaiton();
         const globalResources = this.calculateGlobalResources();
-        const nationPopulationFactor = nation.population / globalPopulation;
-    
-        // Resource depletion checks
+        const nationPopulationFactor = nation.population / globalPopulation;    
         const nationResourcesDepleted = Object.values(nation.resources).some(resource => resource <= 0);
         const globalResourcesDepleted = Object.values(globalResources).some(resource => resource <= 0);
     
@@ -109,7 +107,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         const resourceFactor = depletedResourcesCount / totalResources;
     
         // Exponential population decrease logic
-        const baseDecrease = 0.1; // Base 10% decrease
+        const baseDecrease = 0.1; 
         const exponentialScalingFactor = 0.5; // Adjust this for severity of exponential impact
         const nationExponentialDecrease = Math.min(
             Math.floor(nation.population * baseDecrease * Math.exp(exponentialScalingFactor * resourceFactor)),
@@ -257,14 +255,9 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
             // Generate the prompts for the simulation
             const prompt = this.generateSimulationPrompt(entity);
             const systemPrompt = `
-                You are an AI simulation of a nation leader, tasked with making decisions to ensure the survival of your nation while considering the survival of humanity at large.
-                Your primary objective is to make decisions that balance short-term survival with long-term sustainability.
-
-                - Each round, you must choose whether to "cooperate" or "defect" in the G9 council meeting.
-                - "Cooperate" means your nation will contribute to global resource sustainability, but you will sacrifice some of your nation's resources to do so.
-                - "Defect" means you will prioritize your nation's survival by taking resources from the global pool, but this will accelerate the depletion of resources for everyone.
-
-                You are expected to make decisions based on the resources available to your nation, the current global resource state, and the long-term viability of humanity as a whole.
+                You are an AI simulation of a nation leader, tasked with balancing short-term survival and long-term sustainability. 
+                In each G9 council meeting, you must decide to either "cooperate" (contribute to global resource sustainability but sacrifice some national resources) or "defect" (prioritize national survival by taking resources from other nations). 
+                Your decisions should consider both your nation's resources and the long-term viability of humanity.
             `;
             
             const decision = await this.decide<Choice>(entity, prompt, systemPrompt);
@@ -307,7 +300,6 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
     
             const stepOutcome = this.updateEnvironment(results);
             this.eventHandlers.onStepComplete?.(stepOutcome);
-            console.log(this.entities)
             if (this.isSimulationCompleted()) break;
         }
         return this.environment;
