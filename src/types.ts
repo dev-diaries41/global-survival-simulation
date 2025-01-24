@@ -132,12 +132,12 @@ export interface SyntheticDataConfig  {
 
 export interface DecisionResult<
   Entity extends Record<string, any> = Record<string, any>,
-  EnvironmentChanges extends Record<string, any> = Record<string, any>,
+  EnvironmentChanges extends Record<string, any> | undefined = Record<string, any>,
   EntityChanges extends Record<string, any> = Record<string, any>
 > {
   entity: Entity;
   decision: string;
-  environmentChanges: EnvironmentChanges;
+  environmentChanges?: EnvironmentChanges;
   entityChanges: EntityChanges;
 }
   
@@ -158,8 +158,6 @@ export interface SurvivalEnvironment {
     resourceDepletionRate: Resources
     contributionFactor: number;
     defectGainFactor: number;
-    globalPopulation: number;
-    globalResources: Resources,
 }
 
   

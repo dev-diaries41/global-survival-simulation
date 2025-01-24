@@ -72,9 +72,9 @@ export abstract class Simulation<Entity extends Record<string, any>, Environment
 
     protected abstract decide<T extends string = string>(entity: Entity, prompt?: string, systemPrompt?: string): Promise<T>;
 
-    protected abstract getStateChanges(entity: Entity, decision: string): { entityChanges: DecisionResult['entityChanges']; environmentChanges: DecisionResult['environmentChanges'] };
+    protected abstract getStateChanges(entity: Entity, decision: string): { entityChanges: DecisionResult['entityChanges']; environmentChanges?: DecisionResult['environmentChanges'] };
 
-    protected abstract updateEntity(entity: Entity, entityChanges: DecisionResult['entityChanges']): void;
+    protected abstract updateEntity(entity: Entity, entityChanges: DecisionResult['entityChanges'], decision: DecisionResult['decision']): void;
 
     protected abstract updateEnvironment(results: (DecisionResult | null)[]): StepOutcome;
 
