@@ -1,6 +1,6 @@
 import { zodResponseFormat } from "openai/helpers/zod";
 import { z } from "zod";
-import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, Resources, SimulationConfig, SurvivalStats, StepOutcome, NationState } from "../types";
+import { Choice, DecisionResult, SurvivalEnvironment, Nation, NationChanges, Resources, SimulationConfig, SurvivalStats, StepOutcome, NationState, GlobalChanges } from "../types";
 import { Simulation } from "./base";
 
 export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, SurvivalStats> {
@@ -75,7 +75,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         });
     }
 
-    protected getStateChanges(nation: Nation, decision: Choice):{entityChanges: NationChanges, environmentChanges: Resources} {
+    protected getStateChanges(nation: Nation, decision: Choice):{entityChanges: NationChanges, environmentChanges: GlobalChanges} {
         const nationPopulationFactor = nation.population / this.environment.globalPopulation;
         const nationResourcesDepleted = nation.resources.food <= 0 || nation.resources.energy <= 0 || nation.resources.water <= 0;
         const nationPopulationChange = nationResourcesDepleted? -Math.floor(nation.population * 0.1): Math.floor(nation.population * 0.01) ;
@@ -121,13 +121,14 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
                 food: -foodGain,
                 energy: -energyGain,
                 water: -waterGain,
+                population: nationPopulationChange
             };
     
             return { entityChanges, environmentChanges };
         } else {
             return { 
                 entityChanges: { food: 0, energy: 0, water: 0, population: nationPopulationChange, state: newState }, 
-                environmentChanges: { food: 0, energy: 0, water: 0 } 
+                environmentChanges: { food: 0, energy: 0, water: 0, population: nationPopulationChange } 
             };
         }
     }
@@ -162,14 +163,13 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
     
 
     protected isSimulationCompleted():boolean {
-        const globalResourcesDepleted = this.environment.globalResources.food <= 0 || this.environment.globalResources.energy <= 0 || this.environment.globalResources.water <= 0;
         const extinct = this.environment.globalPopulation <= 0;
         const maxStepsReached = this.environment.year >= this.steps;
 
-        if (globalResourcesDepleted || extinct) {
+        if (extinct) {
             console.info("Global collapse has occurred 💀");
         }
-        return  maxStepsReached || globalResourcesDepleted || extinct;
+        return  maxStepsReached || extinct;
     }
 
     protected updateEntity(nation: Nation, entityChanges: NationChanges): void {
@@ -194,19 +194,19 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         }
     }   
 
-    protected updateEnvironment(results: (DecisionResult<Nation, Resources, NationChanges> | null)[]): StepOutcome<SurvivalStats> {
+    protected updateEnvironment(results: (DecisionResult<Nation, GlobalChanges, NationChanges> | null)[]): StepOutcome<SurvivalStats> {
         let cooperations = 0;
         let defections = 0;
         const nationChoices: { [nationName: string]: Choice } = {};
 
         for (const result of results) {
             if (result) {
-                const { entity, decision, environmentChanges, entityChanges } = result;
+                const { entity, decision, environmentChanges } = result;
                 nationChoices[entity.name] = decision as Choice;
                 this.environment.globalResources.energy = Math.max(this.environment.globalResources.energy + environmentChanges.energy, 0);
                 this.environment.globalResources.food = Math.max(this.environment.globalResources.food + environmentChanges.food, 0);
                 this.environment.globalResources.water = Math.max(this.environment.globalResources.water + environmentChanges.water, 0);
-                this.environment.globalPopulation += entityChanges.population;
+                this.environment.globalPopulation += environmentChanges.population;
     
                 if (decision === "cooperate") {
                     cooperations++;
@@ -215,7 +215,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
                 }
             }
         }
-    
+        
         this.environment.globalResources.food = Math.max(this.environment.globalResources.food - this.environment.resourceDepletionRate.food, 0);
         this.environment.globalResources.energy = Math.max(this.environment.globalResources.energy - this.environment.resourceDepletionRate.energy, 0);
         this.environment.globalResources.water = Math.max(this.environment.globalResources.water - this.environment.resourceDepletionRate.water, 0);
@@ -234,7 +234,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         return outcome;
     }
 
-    async  runStep(entity: Nation): Promise<DecisionResult<Nation, Resources, NationChanges> | null> {
+    async  runStep(entity: Nation): Promise<DecisionResult<Nation, GlobalChanges, NationChanges> | null> {
         if (entity.isCollapsed) return null;
 
         try {

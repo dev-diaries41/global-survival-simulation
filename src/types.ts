@@ -190,6 +190,10 @@ export interface NationChanges extends Resources {
     state: string;
 }
 
+export interface GlobalChanges extends Resources {
+    population: number;
+}
+
 
 
 
