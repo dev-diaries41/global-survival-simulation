@@ -113,9 +113,13 @@ export interface GenerateJSONParams extends  OpenaiChatParams{
     opts?: Omit<Partial<ChatCompletionCreateParamsBase>, 'stream'>;
 }
 
+
+// Simulations
 export interface StepOutcome<T extends Record<string,any> = Record<string,any>>{
     outcome: T
 }
+
+export type SimulationType = "sim" | "llm";
 
 export interface SimulationConfig {
     steps: number;
@@ -141,8 +145,8 @@ export interface DecisionResult<
   entityChanges: EntityChanges;
 }
   
-export type SimulationType = "sim" | "llm";
 
+// Survival Simulation
 export interface Resources {
     food: number;
     energy: number;
@@ -150,7 +154,6 @@ export interface Resources {
 }
 
 export type Choice = "defect" | "cooperate";
-
 
 export interface SurvivalEnvironment {
     year: number;
@@ -160,7 +163,6 @@ export interface SurvivalEnvironment {
     defectGainFactor: number;
 }
 
-  
 export type NationCategory = "low" | "medium" | "high";
 
 export type NationState = "normal" | "struggling";
@@ -192,6 +194,36 @@ export interface GlobalChanges extends Resources {
     population: number;
 }
 
+
+
+// Product-fit Simulation
+
+export type ProductFitChoice = "Yes" | "No";
+
+export interface ProductFitEnvironment {
+    productDescription: string;
+    productName: string;
+    productImage: string;
+    targetAudience: string[];
+    price: number;
+}
+
+
+export type Demographic = {
+    ageRange?: [number, number]; // e.g., [25, 40]
+    race?: string;
+    gender?: string;
+    incomeRange?: [number, number]; // e.g., [30000, 50000]
+};
+
+export interface BetaTester {
+    demographic: Demographic;
+    interests: string;
+    location: string; // e.g., "USA", "Europe"
+    occupation: string; 
+    behavioralTraits: string[]; // e.g., "early adopter", "value-driven"
+    techSavviness: "low" | "medium" | "high";
+}
 
 
 
