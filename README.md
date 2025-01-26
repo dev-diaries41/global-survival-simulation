@@ -6,7 +6,7 @@
 
 **Simiverse** is a versatile simulation framework designed to be a universal plugin for applications, providing the necessary base simulation class and a variety of simulation modules. It allows for easy integration into different systems and can be utilized across various domains such as training data generation for machine learning models, evaluating AI alignment, simulating complex decision-making processes, and more. The framework provides tools for managing entities, environments, and decision-making within simulations, with the flexibility to use AI-driven decision models through an extensible client architecture.
 
-Simiverse consists of a base class, `Simulation`, which supports both traditional and AI-assisted decision-making workflows. Additionally, the framework includes specialized modules, like the `LLMClient` and `OpenAIClient`, to support AI interactions for more advanced simulations. This repo is integrated with a web platform designed to run simulations efficiently and interactively.
+Simiverse features a base class, Simulation, enabling traditional and AI-assisted decision-making workflows. It includes specialized modules like `LLMClient`, an abstract class for AI interactions, and `OpenAIClient`, an implementation example demonstrating its usage with openai. The framework integrates seamlessly with a web platform for efficient and interactive simulations.
 
 ---
 
@@ -60,7 +60,7 @@ import { OpenAIClient } from "../llms/openai";
 
 const simulation = new SurvivalSimulation(entities, environment, {
   steps: 10,
-  type: "sim",
+  type: "llm",
   openaiApiKey: "your-api-key",
   onStepComplete: (eventData) => console.log(eventData),
 });
@@ -104,16 +104,8 @@ simulation.run();
 
 Here are some early ideas and potential features I may implement into the **Simiverse** framework in the future:
 
-- **3D Avatar Generation**: Allow users to generate 3D avatars simply by uploading an image. These avatars could be used within simulations to represent entities or characters in the environment.
-  
-- **Brain-Computer Interface (BCI) Integration**: Enable simulations to interact with brain-computer interfaces for real-time feedback or decision-making based on neural activity.
-
-- **Virtual Reality (VR) Integration**: Provide VR support for immersive simulation experiences. Users could navigate or participate in simulations in real-time using VR headsets, creating an interactive environment.
-
-- **Hardware Integrations**: Explore possibilities to integrate the framework with various hardware platforms. This could include using sensors or IoT devices for real-time data collection, feedback, or control within simulations.
-
-- **3D Holographic Displays**: Experiment with holographic displays for visualization of simulation data. This would provide a more immersive way to interact with and analyze simulation outcomes, potentially including multi-dimensional data.
-
-- **Using Simulation Data to Train ML Models**: Leverage the data generated from simulations as training material for machine learning models. This would allow the creation of robust models by simulating a wide range of conditions and environments, which could be used for reinforcement learning or other AI applications.
-
+- **3D Avatar Creation**: Generate 3D avatars from uploaded images for use in simulations.  
+- **BCI Integration**: Incorporate brain-computer interfaces for real-time neural feedback and decision-making.  
+- **VR Support**: Enable immersive real-time simulation interaction via VR headsets.  
+- **Holographic Displays**: Utilize 3D holographic displays for advanced, multi-dimensional data visualization.
 These ideas are in the early stages and will evolve as the framework continues to develop.
