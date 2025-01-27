@@ -225,6 +225,12 @@ export interface BetaTester {
     techSavviness: "low" | "medium" | "high";
 }
 
+export interface BetaTestersFeedback {
+    upVotes: number;
+    downVotes: number;
+    feedback: string;
+}
+
 
 
   

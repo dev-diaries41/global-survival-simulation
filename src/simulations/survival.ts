@@ -90,7 +90,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
     }
 
     private calculateGlobalPopulaiton(): number{
-        return this.entities.reduce((population, nation) => nation.population + population, 0)
+        return this.entities.filter(nation => !nation.isCollapsed).reduce((population, nation) => nation.population + population, 0);
     }
     
 
