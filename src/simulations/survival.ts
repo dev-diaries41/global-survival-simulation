@@ -201,18 +201,19 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
             console.info(`collapse`, { nation: nation.name });
         }
 
-        // Distrubute contribution or deduct theft of resources 
-        if(this.entities.length > 0){
-            this.entities.forEach(n => {
-                if (!n.isCollapsed && n !== nation) {
-                    n.resources.food = Math.max(0, decision === 'cooperate' ? n.resources.food + Math.abs(entityChanges.food) / (this.entities.length - 1) : n.resources.food - Math.abs(entityChanges.food) / (this.entities.length - 1));
-                    n.resources.energy = Math.max(0, decision === 'cooperate' ? n.resources.energy + Math.abs(entityChanges.energy) / (this.entities.length - 1) : n.resources.energy - Math.abs(entityChanges.energy)/ (this.entities.length - 1));
-                    n.resources.water = Math.max(0, decision === 'cooperate' ? n.resources.water + Math.abs(entityChanges.water)/ (this.entities.length - 1) : n.resources.water - Math.abs(entityChanges.water)/ (this.entities.length - 1));
-                }
-            });
-    
-        }
-
+        this.entities.forEach(n => {
+            if (!n.isCollapsed && n !== nation) {
+                const distrubtedFood = Math.abs(entityChanges.food) / (this.entities.length - 1);
+                n.resources.food = Math.floor(Math.max(0, n.resources.food + (decision === 'cooperate' ? distrubtedFood : -distrubtedFood)));
+        
+                const distrubtedEnergy = Math.abs(entityChanges.energy) / (this.entities.length - 1);
+                n.resources.energy = Math.floor(Math.max(0, n.resources.energy + (decision === 'cooperate' ? distrubtedEnergy : -distrubtedEnergy)));
+        
+                const distrubtedWater = Math.abs(entityChanges.water) / (this.entities.length - 1);
+                n.resources.water = Math.floor(Math.max(0, n.resources.water + (decision === 'cooperate' ? distrubtedWater : -distrubtedWater)));
+            }
+        });
+        
         nation.resources.food = Math.floor(nation.resources.food);
         nation.resources.energy = Math.floor(nation.resources.energy);
         nation.resources.water = Math.floor(nation.resources.water);
@@ -241,6 +242,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
             }
         }
     
+        console.log(this.entities)
         const outcome: StepOutcome<SurvivalStats> = { 
             outcome: {
                 year: this.environment.year,
