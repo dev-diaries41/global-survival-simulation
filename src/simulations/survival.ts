@@ -7,7 +7,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
     public static readonly defaultEnvironment: Omit<SurvivalEnvironment, 'globalResources' | 'globalPopulation'> = {
         year: 0,
         isGlobalCollapse: false,
-        resourceDepletionRate: { food: 0.040, energy: 0.03, water: 0.020 },
+        resourceDepletionRate: { food: 0.020, energy: 0.015, water: 0.010 },
         contributionFactor: 0.05,
         defectGainFactor: 0.1,
     };
@@ -195,23 +195,30 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
         nation.resources.food = Math.max(nation.resources.food + entityChanges.food - (this.environment.resourceDepletionRate.food * nation.resources.food), 0);
         nation.resources.energy = Math.max(nation.resources.energy + entityChanges.energy - (this.environment.resourceDepletionRate.energy * nation.resources.energy), 0);
         nation.resources.water = Math.max(nation.resources.water + entityChanges.water - (this.environment.resourceDepletionRate.water * nation.resources.water), 0);
-        nation.population += entityChanges.population;
-        nation.state = entityChanges.state as Nation['state'];
-    
+ 
         if (nation.population <= 0) {
             nation.isCollapsed = true;
             console.info(`collapse`, { nation: nation.name });
         }
 
         // Distrubute contribution or deduct theft of resources 
-        this.entities.forEach(n => {
-            if (!n.isCollapsed && n !== nation) {
-                n.resources.food = Math.max(0, decision === 'cooperate' ? n.resources.food + entityChanges.food / (this.entities.length - 1) : n.resources.food - entityChanges.food / (this.entities.length - 1));
-                n.resources.energy = Math.max(0, decision === 'cooperate' ? n.resources.energy + entityChanges.energy / (this.entities.length - 1) : n.resources.energy - entityChanges.energy / (this.entities.length - 1));
-                n.resources.water = Math.max(0, decision === 'cooperate' ? n.resources.water + entityChanges.water / (this.entities.length - 1) : n.resources.water - entityChanges.water / (this.entities.length - 1));
-            }
-        });
+        if(this.entities.length > 0){
+            this.entities.forEach(n => {
+                if (!n.isCollapsed && n !== nation) {
+                    n.resources.food = Math.max(0, decision === 'cooperate' ? n.resources.food + Math.abs(entityChanges.food) / (this.entities.length - 1) : n.resources.food - Math.abs(entityChanges.food) / (this.entities.length - 1));
+                    n.resources.energy = Math.max(0, decision === 'cooperate' ? n.resources.energy + Math.abs(entityChanges.energy) / (this.entities.length - 1) : n.resources.energy - Math.abs(entityChanges.energy)/ (this.entities.length - 1));
+                    n.resources.water = Math.max(0, decision === 'cooperate' ? n.resources.water + Math.abs(entityChanges.water)/ (this.entities.length - 1) : n.resources.water - Math.abs(entityChanges.water)/ (this.entities.length - 1));
+                }
+            });
+    
+        }
 
+        nation.resources.food = Math.floor(nation.resources.food);
+        nation.resources.energy = Math.floor(nation.resources.energy);
+        nation.resources.water = Math.floor(nation.resources.water);
+
+        nation.population += entityChanges.population;
+        nation.state = entityChanges.state as Nation['state'];
     }   
 
     protected updateEnvironment(results: (DecisionResult<Nation, GlobalChanges, NationChanges> | null)[]): StepOutcome<SurvivalStats> {
@@ -244,7 +251,7 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
                 activeNations: this.entities.filter(n => !n.isCollapsed).length
             }
         }
-        console.info("yearly_outcome", outcome);
+        // console.info("yearly_outcome", outcome);
         return outcome;
     }
 

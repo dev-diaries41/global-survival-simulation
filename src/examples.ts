@@ -4,8 +4,10 @@ import { generateSimulatedData, SurvivalSimulation} from ".";
 (async () => {
     const sim = new SurvivalSimulation([], {}, {
         type: 'sim',
-        steps: 100
+        steps: 100,
+        onStepComplete(stepOutcome) {
+            console.log(stepOutcome)
+        },
     })
-    const result = await sim.run();
-    console.log(result)
+    await sim.run();
 })();
