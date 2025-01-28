@@ -242,7 +242,6 @@ export class SurvivalSimulation extends Simulation<Nation, SurvivalEnvironment, 
             }
         }
     
-        console.log(this.entities)
         const outcome: StepOutcome<SurvivalStats> = { 
             outcome: {
                 year: this.environment.year,
